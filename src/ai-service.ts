@@ -9,7 +9,7 @@ const STORAGE_KEY = 'dg-agent-settings';
 const MAX_TOOL_ITERATIONS = 5;
 
 // Free tier proxy URL (Cloudflare Worker)
-const FREE_PROXY_URL = 'https://dg-agent-proxy.0xnull.workers.dev';
+const FREE_PROXY_URL = 'https://dg-agent-proxy.0xnullai.workers.dev';
 
 // ---------------------------------------------------------------------------
 // Config helpers — reads from the same localStorage key as app.js
