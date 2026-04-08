@@ -580,11 +580,18 @@ async function handleConnect(): Promise<void> {
   }
 
   if (!(navigator as any).bluetooth) {
-    chat.addAssistantMessage(
-      '当前浏览器不支持 Web Bluetooth。\n\n' +
-      '请使用 **Chrome** 或 **Edge** 浏览器打开本页面。\n' +
-      'iOS 设备暂不支持（Safari 未实现 Web Bluetooth）。'
-    );
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS) {
+      chat.addAssistantMessage(
+        'iOS 系统不支持 Web Bluetooth。\n\n' +
+        '请在 App Store 下载 **Bluefy** 浏览器（免费），然后用 Bluefy 打开本页面即可正常连接设备。'
+      );
+    } else {
+      chat.addAssistantMessage(
+        '当前浏览器不支持 Web Bluetooth。\n\n' +
+        '请使用 **Chrome** 或 **Edge** 浏览器打开本页面。'
+      );
+    }
     return;
   }
 
