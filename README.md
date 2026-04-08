@@ -1,0 +1,161 @@
+# 🐺 DG-Agent — 在浏览器中用 AI 控制郊狼 3.0
+
+> 🌐 基于 Web Bluetooth 的 DG-Lab 郊狼 3.0 脉冲主机 AI 控制器，打开网页即可通过自然语言对话控制设备。
+
+**[👉 立即体验 → 0xnullai.github.io/DG-Agent](https://0xnullai.github.io/DG-Agent/)**
+
+## ✨ 特性
+
+- 🌐 **纯网页运行** — 无需安装任何 APP，打开浏览器即用
+- 🦷 **BLE 直连** — Web Bluetooth 直接连接郊狼 3.0，无需配对
+- 🤖 **多 AI 支持** — DeepSeek / 通义千问 / Gemini / OpenAI，一键切换
+- 🎭 **6 种场景模式** — 温柔调情、主导调教、欲擒故纵、奖惩游戏、边缘控制、温情陪伴
+- ✏️ **自定义人设** — 自由编写 AI 人设提示词，支持保存多套方案
+- 🎛️ **7 个工具** — AI 自动调用：强度控制、波形播放、自定义波形设计、状态查询
+- 🌊 **6 种预设波形** — 呼吸、潮汐、低/中/高脉冲、敲击
+- 📱 **全设备适配** — 手机、平板、电脑，响应式布局 + 深色/浅色主题
+- 💾 **本地存储** — 聊天记录、设置、自定义人设全部保存在浏览器本地
+- 🔒 **隐私安全** — 无后端服务器，API Key 和聊天数据仅存在你的设备上
+
+## 🚀 快速开始
+
+### 1️⃣ 选择 AI 服务并配置
+
+点击顶栏 ⚙️ 按钮，选择一个 AI 服务商并填入 API Key：
+
+| 服务商 | 国内直连 | 获取 API Key |
+|--------|---------|-------------|
+| 🔥 **DeepSeek** (推荐) | ✅ | [platform.deepseek.com](https://platform.deepseek.com) |
+| 🟣 **通义千问** | ✅ | [bailian.console.aliyun.com](https://bailian.console.aliyun.com) |
+| 🔵 **Gemini** | ❌ 需代理 | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| ⚫ **OpenAI** | ❌ 需代理 | [platform.openai.com](https://platform.openai.com) |
+
+> 💡 国内用户推荐 **DeepSeek**，注册即送免费额度，无需代理。
+
+### 2️⃣ 连接设备
+
+1. 🔋 长按郊狼 3.0 电源键开机
+2. 📡 确保设备蓝牙已开启
+3. 🔗 点击顶栏蓝牙按钮，在弹出的系统配对框中选择设备
+
+> ⚠️ Web Bluetooth 需要 HTTPS 环境 + 支持的浏览器（Chrome / Edge / Opera）
+
+### 3️⃣ 开始对话
+
+选择一个场景模式（或自定义人设），然后直接和 AI 聊天。AI 会根据对话内容自动控制设备：
+
+```
+你：轻轻试一下 A 通道
+AI：好的，我先用很轻的力度让你感受一下~
+    🔧 set_strength(channel: A, value: 8)
+    🔧 send_wave(channel: A, preset: breath)
+AI：已经开始了哦，是很轻柔的呼吸波形，感觉怎么样？
+```
+
+## 🎭 场景模式
+
+| 模式 | 图标 | 风格 |
+|------|------|------|
+| **温柔调情** | 💕 | 甜蜜话语 + 轻柔刺激，浪漫氛围 |
+| **主导调教** | 👑 | 威严掌控，奖惩分明，循序渐进 |
+| **欲擒故纵** | 🦊 | 若即若离，快感边缘反复拉扯 |
+| **奖惩游戏** | 🎲 | 问答/任务/骰子，互动性强 |
+| **边缘控制** | 🌊 | 精准控制在临界点，延迟释放 |
+| **温情陪伴** | 🤗 | 轻松聊天 + 舒适体感，无压力 |
+| **自定义** | ✏️ | 自由编写 AI 人设，保存多套方案 |
+
+## 🎛️ AI 工具一览
+
+| 工具 | 说明 | 示例 |
+|------|------|------|
+| ⚡ `set_strength` | 设置通道强度 (0~200) | `set_strength("A", 10)` |
+| ➕ `add_strength` | 增减强度 | `add_strength("A", 5)` |
+| 🔒 `set_strength_limit` | 设置强度软上限 | `set_strength_limit(50, 50)` |
+| 🌊 `send_wave` | 发送预设波形 | `send_wave("A", preset="breath")` |
+| 🎨 `design_wave` | 设计多步变化波形 | `design_wave("A", steps=[...])` |
+| ⏹️ `stop_wave` | 停止波形输出 | `stop_wave("A")` |
+| 📊 `get_status` | 查询设备状态 | `get_status()` |
+
+## 🌊 预设波形
+
+| 名称 | 说明 | 体感 |
+|------|------|------|
+| 🫁 `breath` | 呼吸 | 缓慢起伏，从无到强再回落 |
+| 🌊 `tide` | 潮汐 | 频率渐变，波浪感 |
+| 💤 `pulse_low` | 低脉冲 | 轻柔持续 |
+| ⚡ `pulse_mid` | 中脉冲 | 中等持续 |
+| 🔥 `pulse_high` | 高脉冲 | 强烈持续 |
+| 👆 `tap` | 敲击 | 有节奏的间歇脉冲 |
+
+## 🏗️ 项目结构
+
+```
+DG-Agent/
+├── 📄 index.html              # 入口页面
+├── 📄 vite.config.ts           # Vite 构建配置
+├── 📄 tsconfig.json            # TypeScript 配置
+├── 📦 src/
+│   ├── 🤖 app.ts              # 主入口：UI 交互、设置、历史记录
+│   ├── 📡 bluetooth.ts         # Web Bluetooth BLE 协议实现
+│   ├── 🧠 ai-service.ts        # AI 服务：Gemini / OpenAI 兼容 / DeepSeek / Qwen
+│   ├── 🎛️ tools.ts             # 工具定义 + 场景预设 + 系统提示词
+│   ├── 💬 chat.ts              # 聊天 UI：消息渲染、Markdown、流式输出
+│   ├── 📜 history.ts           # 聊天历史持久化 (localStorage)
+│   ├── 🎨 style.css            # 完整样式：设计系统 + 响应式布局
+│   └── 📝 types.ts             # TypeScript 类型定义
+└── 📦 .github/workflows/
+    └── 🚀 deploy.yml           # GitHub Pages 自动部署
+```
+
+## 🔧 本地开发
+
+```bash
+# 克隆项目
+git clone https://github.com/0xNullAI/DG-Agent.git
+cd DG-Agent
+
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+
+# 构建生产版本
+npm run build
+```
+
+> 💡 本地开发需要 HTTPS 才能使用 Web Bluetooth。Vite 默认使用 HTTP，可通过 `--https` 参数或使用 Chrome 的 `chrome://flags/#unsafely-treat-insecure-origin-as-secure` 添加 `http://localhost:5173` 白名单。
+
+## 🖥️ 浏览器支持
+
+| 浏览器 | 状态 | 说明 |
+|--------|------|------|
+| 🟢 Chrome (桌面) | ✅ 支持 | 推荐 |
+| 🟢 Edge (桌面) | ✅ 支持 | 推荐 |
+| 🟢 Chrome (Android) | ✅ 支持 | 需系统蓝牙权限 |
+| 🟡 Opera | ⚠️ 部分支持 | 需手动启用 Web Bluetooth |
+| 🔴 Safari | ❌ 不支持 | Apple 未实现 Web Bluetooth |
+| 🔴 Firefox | ❌ 不支持 | Mozilla 未实现 Web Bluetooth |
+
+## ⚠️ 安全须知
+
+> 🚨 **重要！请务必阅读！**
+
+1. ⚡ **从低强度开始** — 首次使用建议强度设为 `5~10`，逐步增加
+2. 🔒 **设置软上限** — 使用 `set_strength_limit` 限制最大强度，防止意外
+3. 🚫 **紧急停止** — 直接关闭郊狼电源即可立即停止所有输出
+4. 💓 **禁止区域** — 请勿将电极放置在心脏区域或头颈部
+5. 🤖 **AI 不是人** — AI 无法感知你的实际体验，请随时手动调整或停止
+
+## 📜 致谢
+
+- [DG-MCP](https://github.com/0xNullAI/DG-MCP) — 本项目的 Python MCP 版本
+- [DG-LAB-OPENSOURCE](https://github.com/DG-LAB-OPENSOURCE/DG-LAB-OPENSOURCE) — 官方开源 BLE 协议
+
+## 🚨 免责声明
+
+> **本项目仅供学习交流使用，不得用于任何违法或不当用途。使用者应自行承担使用本项目所产生的一切风险和责任，项目作者不对因使用本项目而导致的任何直接或间接损害承担责任。**
+
+## 📄 License
+
+MIT
