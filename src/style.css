@@ -1079,9 +1079,6 @@ html, body {
   .provider-tab {
     flex: 0 0 calc(50% - 2px);
   }
-  .provider-tab:first-child {
-    flex: 0 0 100%;
-  }
 
   .icon-btn { width: 34px; height: 34px; }
 

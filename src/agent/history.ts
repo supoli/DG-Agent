@@ -1,8 +1,9 @@
 /**
- * history.ts -- Chat history persistence using localStorage
+ * history.ts -- Chat history persistence using localStorage.
  */
 
-import type { ConversationRecord } from '../types';
+import type { ConversationItem, ConversationRecord } from '../types';
+import { getItemText } from '../types';
 
 const STORAGE_KEY = 'dg-agent-history';
 const MAX_CONVERSATIONS = 50;
@@ -29,9 +30,7 @@ export function saveConversation(conv: ConversationRecord): void {
   } else {
     list.push(conv);
   }
-  // Sort by updatedAt desc
   list.sort((a, b) => b.updatedAt - a.updatedAt);
-  // Trim to MAX_CONVERSATIONS (remove oldest)
   const trimmed = list.slice(0, MAX_CONVERSATIONS);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
@@ -57,7 +56,7 @@ export function createConversation(presetId: string): ConversationRecord {
   return {
     id,
     title: '\u65B0\u5BF9\u8BDD',
-    messages: [],
+    items: [],
     presetId,
     createdAt: now,
     updatedAt: now,
@@ -65,10 +64,14 @@ export function createConversation(presetId: string): ConversationRecord {
 }
 
 /** Generate a title from the first user message (truncate to 30 chars) */
-export function generateTitle(messages: { role: string; content: string }[]): string {
-  const firstUser = messages.find((m) => m.role === 'user');
-  if (!firstUser || typeof firstUser.content !== 'string') return '\u65B0\u5BF9\u8BDD';
-  const text = firstUser.content.trim();
-  if (text.length <= 30) return text;
-  return text.slice(0, 30) + '...';
+export function generateTitle(items: ConversationItem[]): string {
+  for (const item of items) {
+    const display = getItemText(item);
+    if (display?.role === 'user') {
+      const text = display.text.trim();
+      if (text.length <= 30) return text;
+      return text.slice(0, 30) + '...';
+    }
+  }
+  return '\u65B0\u5BF9\u8BDD';
 }

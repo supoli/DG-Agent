@@ -39,27 +39,67 @@ export interface ToolDef {
   };
 }
 
-/** AI chat message */
-export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system' | 'tool';
-  content: string | unknown[];
-  tool_calls?: unknown[];
-  tool_call_id?: string;
-  name?: string;
-  parts?: unknown[];
+// ---------------------------------------------------------------------------
+// Conversation item types — maps to OpenAI Responses API input/output
+// ---------------------------------------------------------------------------
+
+/** User message (easy format) */
+export interface UserItem {
+  role: 'user';
+  content: string;
 }
 
-/** AI chat response */
-export interface ChatResponse {
+/** Assistant text message */
+export interface AssistantItem {
   role: 'assistant';
   content: string;
 }
 
-/** Tool call handler */
-export type ToolCallHandler = (name: string, args: Record<string, unknown>) => Promise<string>;
+/** Function call from AI response */
+export interface FunctionCallItem {
+  type: 'function_call';
+  call_id: string;
+  name: string;
+  arguments: string;
+}
 
-/** Stream text handler */
-export type StreamTextHandler = (chunk: string) => void;
+/** Function call result (created by client after tool execution) */
+export interface FunctionCallOutputItem {
+  type: 'function_call_output';
+  call_id: string;
+  output: string;
+}
+
+/** Any item in a conversation — can be passed directly as Responses API input */
+export type ConversationItem =
+  | UserItem
+  | AssistantItem
+  | FunctionCallItem
+  | FunctionCallOutputItem;
+
+/** Extract displayable text from a conversation item */
+export function getItemText(item: ConversationItem): { role: 'user' | 'assistant'; text: string } | null {
+  if (!item) return null;
+  const it = item as any;
+  if (it.type === 'function_call' || it.type === 'function_call_output') return null;
+  if (it.role === 'user') return { role: 'user', text: it.content };
+  if (it.role === 'assistant') return { role: 'assistant', text: it.content };
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Chat callbacks
+// ---------------------------------------------------------------------------
+
+/** Callbacks for the AI chat function */
+export interface ChatCallbacks {
+  onToolCall: (name: string, args: Record<string, unknown>) => Promise<string>;
+  onStreamText?: (chunk: string) => void;
+}
+
+// ---------------------------------------------------------------------------
+// UI / config types
+// ---------------------------------------------------------------------------
 
 /** Scene prompt preset */
 export interface PromptPreset {
@@ -81,7 +121,7 @@ export interface SavedPrompt {
 export interface ConversationRecord {
   id: string;
   title: string;
-  messages: { role: string; content: string }[];
+  items: ConversationItem[];
   presetId: string;
   createdAt: number;
   updatedAt: number;

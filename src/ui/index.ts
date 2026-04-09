@@ -4,6 +4,7 @@
  */
 
 import type { ConversationRecord } from '../types';
+import { getItemText } from '../types';
 import { bluetooth, conversation, history, PROMPT_PRESETS, executeTool } from '../agent';
 import { loadSettings } from '../agent/providers';
 import * as chat from './chat';
@@ -225,9 +226,11 @@ function loadConversationUI(conv: ConversationRecord): void {
   const messagesEl = $('messages');
   if (messagesEl) messagesEl.innerHTML = '';
 
-  for (const msg of conv.messages) {
-    if (msg.role === 'user') chat.addUserMessage(msg.content);
-    else if (msg.role === 'assistant') chat.addAssistantMessage(msg.content);
+  for (const item of conv.items) {
+    const display = getItemText(item);
+    if (!display) continue;
+    if (display.role === 'user') chat.addUserMessage(display.text);
+    else if (display.role === 'assistant') chat.addAssistantMessage(display.text);
   }
 
   updatePillLabels();

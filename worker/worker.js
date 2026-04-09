@@ -1,26 +1,21 @@
 /**
- * Cloudflare Worker — DG-Agent DeepSeek Proxy
+ * Cloudflare Worker — DG-Agent Free Tier Proxy
  *
- * Rate-limited proxy to DeepSeek API.
+ * Rate-limited proxy to Qwen Bailian Responses API.
  * API key stored as Worker secret, not exposed to frontend.
  *
- * Uses in-memory rate limiting (no KV dependency).
- * Note: each Worker isolate has its own counter map, so limits
- * are approximate across multiple edge locations — acceptable
- * for a lightweight abuse guard.
- *
  * Environment variables (set via wrangler secret):
- *   DEEPSEEK_API_KEY  — your DeepSeek API key
+ *   BAILIAN_API_KEY  — your Qwen Bailian API key
  *
  * Deploy:
  *   1. npm install -g wrangler
  *   2. cd worker
  *   3. wrangler login
- *   4. wrangler secret put DEEPSEEK_API_KEY
+ *   4. wrangler secret put BAILIAN_API_KEY
  *   5. wrangler deploy
  */
 
-const DEEPSEEK_API = 'https://api.deepseek.com/v1/chat/completions';
+const BAILIAN_API = 'https://dashscope.aliyuncs.com/compatible-mode/v1/responses';
 const MAX_REQUESTS_PER_MINUTE = 10;
 const ALLOWED_ORIGINS = [
   'https://0xnullai.github.io',
@@ -87,27 +82,27 @@ export default {
     }
 
     // Force model and limits
-    body.model = body.model || 'deepseek-chat';
-    body.max_tokens = Math.min(body.max_tokens || 2048, 2048);
+    body.model = body.model || 'qwen3.6-plus';
+    body.max_output_tokens = Math.min(body.max_output_tokens || 2048, 2048);
     // Remove any api key from body
     delete body.api_key;
     delete body.apiKey;
 
-    // Forward to DeepSeek
+    // Forward to Bailian Responses API
     try {
-      const dsResponse = await fetch(DEEPSEEK_API, {
+      const apiResponse = await fetch(BAILIAN_API, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}`,
+          'Authorization': `Bearer ${env.BAILIAN_API_KEY}`,
         },
         body: JSON.stringify(body),
       });
 
       // Stream passthrough
       if (body.stream) {
-        return corsResponse(request, new Response(dsResponse.body, {
-          status: dsResponse.status,
+        return corsResponse(request, new Response(apiResponse.body, {
+          status: apiResponse.status,
           headers: {
             'Content-Type': 'text/event-stream',
             'Cache-Control': 'no-cache',
@@ -115,8 +110,8 @@ export default {
         }));
       }
 
-      const data = await dsResponse.json();
-      return corsResponse(request, jsonResponse(data, dsResponse.status));
+      const data = await apiResponse.json();
+      return corsResponse(request, jsonResponse(data, apiResponse.status));
     } catch (e) {
       return corsResponse(request, jsonResponse({ error: '代理请求失败: ' + e.message }, 502));
     }
