@@ -730,10 +730,11 @@ async function handleSendMessage(text: string): Promise<void> {
     );
 
     chat.hideTyping();
-    if (response?.content) {
-      currentAssistantMsgId = chat.addAssistantMessage(response.content, currentAssistantMsgId || undefined);
+    const finalContent = streamedText || response?.content || '';
+    if (finalContent) {
+      currentAssistantMsgId = chat.addAssistantMessage(finalContent, currentAssistantMsgId || undefined);
       chat.finalizeAssistantMessage(currentAssistantMsgId);
-      conversationHistory.push({ role: 'assistant', content: response.content });
+      conversationHistory.push({ role: 'assistant', content: finalContent });
     }
   } catch (err: any) {
     chat.hideTyping();

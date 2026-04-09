@@ -5,6 +5,22 @@
 import type { PromptPreset, ToolDef, WaveStep } from './types';
 import * as bt from './bluetooth';
 
+// ============================================================
+// Timer registry
+// ============================================================
+interface TimerEntry {
+  id: number;
+  label: string;
+  timeoutHandle: ReturnType<typeof setTimeout>;
+  action: string;
+  args: Record<string, any>;
+  createdAt: number;
+  delayMs: number;
+}
+
+let nextTimerId = 1;
+const timers: Map<number, TimerEntry> = new Map();
+
 /**
  * 设备能力说明 — 作为系统后缀追加到所有 prompt 后面。
  * 让 AI 在任何人设下都知道如何使用郊狼设备。
@@ -20,6 +36,7 @@ export const DEVICE_SUFFIX = `
 - 可用波形预设：breath(呼吸/渐强渐弱)、tide(潮汐/波浪起伏)、pulse_low(低脉冲/轻柔)、pulse_mid(中脉冲/适中)、pulse_high(高脉冲/强烈)、tap(轻拍/节奏感)
 - 可通过 design_wave 自定义任意波形组合，每步可设频率(10-1000ms)、强度(0-100)、重复次数
 - 操作流程：设置强度(set_strength) → 发送波形(send_wave)
+- 定时器功能：可用 set_timer 延迟执行任意工具操作（如"10秒后停止波形"、"5秒后切换到高脉冲"），用 cancel_timer 取消，用 list_timers 查看
 - 重要：只在用户明确要求操作设备时才调用工具。普通聊天、问候、闲聊绝对不要调用任何工具
 - 绝对不要连续多次调用同一个工具。get_status 最多调用一次，拿到结果后必须直接用文字回复用户
 - 每次回复中工具调用总数不应超过3次
@@ -237,6 +254,40 @@ export const tools: ToolDef[] = [
     description: '获取设备当前状态（连接状态、强度、电量、波形状态等）',
     parameters: { type: 'object' as const, properties: {} },
   },
+  {
+    name: 'set_timer',
+    description: '设置定时器，延迟指定秒数后自动执行一个工具操作。可用于延迟切换波形、调整强度、停止输出等',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        delay_seconds: { type: 'number', minimum: 1, maximum: 3600, description: '延迟秒数(1-3600)' },
+        action: {
+          type: 'string',
+          enum: ['set_strength', 'add_strength', 'send_wave', 'design_wave', 'stop_wave'],
+          description: '到时要执行的工具名',
+        },
+        action_args: { type: 'object', description: '传给目标工具的参数' },
+        label: { type: 'string', description: '定时器备注（可选），如"切换到高脉冲"' },
+      },
+      required: ['delay_seconds', 'action', 'action_args'],
+    },
+  },
+  {
+    name: 'cancel_timer',
+    description: '取消一个尚未执行的定时器',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        timer_id: { type: 'integer', description: '要取消的定时器ID' },
+      },
+      required: ['timer_id'],
+    },
+  },
+  {
+    name: 'list_timers',
+    description: '列出所有待执行的定时器',
+    parameters: { type: 'object' as const, properties: {} },
+  },
 ];
 
 /**
@@ -304,6 +355,68 @@ export async function executeTool(name: string, args: Record<string, any>): Prom
           ...status,
           _hint: '状态已获取，请直接根据此结果回复用户，不要再次调用任何工具。',
         });
+      }
+
+      case 'set_timer': {
+        const { delay_seconds, action, action_args, label } = args as {
+          delay_seconds: number;
+          action: string;
+          action_args: Record<string, any>;
+          label?: string;
+        };
+        const id = nextTimerId++;
+        const delayMs = delay_seconds * 1000;
+        const handle = setTimeout(async () => {
+          timers.delete(id);
+          try {
+            await executeTool(action, action_args);
+            console.log(`[timer] #${id} executed: ${action}`, action_args);
+          } catch (e) {
+            console.error(`[timer] #${id} failed:`, e);
+          }
+        }, delayMs);
+        const entry: TimerEntry = {
+          id,
+          label: label || action,
+          timeoutHandle: handle,
+          action,
+          args: action_args,
+          createdAt: Date.now(),
+          delayMs,
+        };
+        timers.set(id, entry);
+        return JSON.stringify({
+          success: true,
+          timer_id: id,
+          delay_seconds,
+          action,
+          action_args,
+          label: entry.label,
+          message: `定时器 #${id} 已设置，${delay_seconds}秒后执行 ${action}`,
+        });
+      }
+
+      case 'cancel_timer': {
+        const { timer_id } = args as { timer_id: number };
+        const entry = timers.get(timer_id);
+        if (!entry) {
+          return JSON.stringify({ success: false, error: `定时器 #${timer_id} 不存在或已执行` });
+        }
+        clearTimeout(entry.timeoutHandle);
+        timers.delete(timer_id);
+        return JSON.stringify({ success: true, message: `定时器 #${timer_id} (${entry.label}) 已取消` });
+      }
+
+      case 'list_timers': {
+        const now = Date.now();
+        const list = Array.from(timers.values()).map((t) => ({
+          timer_id: t.id,
+          label: t.label,
+          action: t.action,
+          action_args: t.args,
+          remaining_seconds: Math.max(0, Math.round((t.createdAt + t.delayMs - now) / 1000)),
+        }));
+        return JSON.stringify({ success: true, count: list.length, timers: list });
       }
 
       default:
