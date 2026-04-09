@@ -85,14 +85,14 @@
 
       <!-- Main chat area -->
       <main id="main">
-        <div id="chat-container">
-          <div id="active-timers-panel" class="active-timers-panel hidden">
-            <div class="timers-header">
-              <span>⏱️ 活跃定时器</span>
-              <button id="btn-cancel-all-timers" class="cancel-all-btn" title="取消全部">全部取消</button>
-            </div>
-            <div id="timers-list" class="timers-list"></div>
+        <div id="active-timers-panel" class="active-timers-panel">
+          <div class="timers-header">
+            <span>⏱️ 定时器</span>
+            <button id="btn-cancel-all-timers" class="cancel-all-btn hidden" title="取消全部">全部取消</button>
           </div>
+          <div id="timers-list" class="timers-list"><span class="timer-empty">无活跃定时器</span></div>
+        </div>
+        <div id="chat-container">
           <div id="messages"></div>
         </div>
 

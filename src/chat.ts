@@ -148,16 +148,17 @@ export function addSystemMessage(text: string): void {
 
 /** Update the active timers panel. Pass empty array to hide. */
 export function updateTimerPanel(timers: Array<{timer_id: number; label: string; action: string; repeat_done: number; repeat_total: number}>): void {
-  const panel = document.getElementById('active-timers-panel');
   const list = document.getElementById('timers-list');
-  if (!panel || !list) return;
+  const cancelAllBtn = document.getElementById('btn-cancel-all-timers');
+  if (!list) return;
 
   if (timers.length === 0) {
-    panel.classList.add('hidden');
+    list.innerHTML = '<span class="timer-empty">无活跃定时器</span>';
+    cancelAllBtn?.classList.add('hidden');
     return;
   }
 
-  panel.classList.remove('hidden');
+  cancelAllBtn?.classList.remove('hidden');
   list.innerHTML = timers.map(t => {
     const progress = t.repeat_total > 1 ? `${t.repeat_done}/${t.repeat_total}` : '待执行';
     return `<div class="timer-item" data-timer-id="${t.timer_id}">

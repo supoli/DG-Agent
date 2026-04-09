@@ -591,22 +591,27 @@ html, body {
   background: #dc2626 !important;
 }
 
-/* ---------- Active timers panel ---------- */
+/* ---------- Active timers panel (always visible) ---------- */
 .active-timers-panel {
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border);
   padding: 8px 16px;
   font-size: 0.85em;
+  flex-shrink: 0;
 }
-.active-timers-panel.hidden { display: none; }
 
 .timers-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   color: var(--text-2);
   font-weight: 600;
+}
+
+.timer-empty {
+  color: var(--text-3, #999);
+  font-size: 0.9em;
 }
 
 .cancel-all-btn {

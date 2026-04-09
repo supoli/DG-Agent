@@ -765,7 +765,7 @@ async function handleSendMessage(text: string): Promise<void> {
         chat.addToolNotification(toolName, toolArgs, result);
         // Refresh timer panel when timer-related tools are called
         if (toolName === 'set_timer' || toolName === 'cancel_timer') {
-          refreshTimerPanel();
+          await refreshTimerPanel();
         }
         return result;
       },
@@ -874,7 +874,7 @@ async function handleTimerFire(info: TimerNotification): Promise<void> {
     { action: info.action, ...info.actionArgs },
     info.result,
   );
-  refreshTimerPanel();
+  await refreshTimerPanel();
 
   // For repeating timers, skip LLM notification on intermediate ticks to save tokens
   if (!shouldNotifyLLM(info)) return;
@@ -949,7 +949,7 @@ async function sendTimerNotificationToLLM(notifications: TimerNotification[]): P
         }
         chat.addToolNotification(toolName, toolArgs, result);
         if (toolName === 'set_timer' || toolName === 'cancel_timer') {
-          refreshTimerPanel();
+          await refreshTimerPanel();
         }
         return result;
       },
