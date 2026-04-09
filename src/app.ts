@@ -763,6 +763,10 @@ async function handleSendMessage(text: string): Promise<void> {
           result = JSON.stringify({ error: err.message });
         }
         chat.addToolNotification(toolName, toolArgs, result);
+        // Refresh timer panel when timer-related tools are called
+        if (toolName === 'set_timer' || toolName === 'cancel_timer') {
+          refreshTimerPanel();
+        }
         return result;
       },
       (textChunk: string) => {
@@ -944,6 +948,9 @@ async function sendTimerNotificationToLLM(notifications: TimerNotification[]): P
           result = JSON.stringify({ error: err.message });
         }
         chat.addToolNotification(toolName, toolArgs, result);
+        if (toolName === 'set_timer' || toolName === 'cancel_timer') {
+          refreshTimerPanel();
+        }
         return result;
       },
       (textChunk: string) => {
