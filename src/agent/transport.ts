@@ -50,8 +50,9 @@ export function resolveProviderConfig(): TransportConfig {
   return {
     baseUrl: baseUrl.replace(/\/+$/, ''),
     apiKey,
-    // Final fallback preserves the legacy default from ai-service.ts so a
-    // custom provider with no model still produces a valid request body.
+    // Last-resort fallback so a custom provider with no model still produces
+    // a valid request body. Any real provider block above already filled
+    // this in; this only matters for misconfigured 'custom' setups.
     model: model || 'gpt-5.3',
     providerId,
   };

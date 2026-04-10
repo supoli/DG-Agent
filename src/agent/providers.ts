@@ -80,6 +80,25 @@ export function loadSettings(): AppSettings {
         parsed.maxStrengthB = legacy ?? DEFAULT_MAX_STRENGTH;
       }
       delete parsed.maxStrength;
+
+      // Default + self-heal the permission mode. Only 'ask' and 'timed'
+      // are valid persisted values: 'always' is session-scoped and lives in
+      // memory only, so any stale 'always' from an earlier build or a
+      // previous session must be downgraded to 'ask' on load.
+      if (parsed.permissionMode !== 'ask' && parsed.permissionMode !== 'timed') {
+        parsed.permissionMode = 'ask';
+        delete parsed.permissionModeExpiresAt;
+      }
+      // Expired timed windows auto-revert so users don't come back to an
+      // already-unlocked session hours later.
+      if (
+        parsed.permissionMode === 'timed' &&
+        (typeof parsed.permissionModeExpiresAt !== 'number' ||
+          Date.now() >= parsed.permissionModeExpiresAt)
+      ) {
+        parsed.permissionMode = 'ask';
+        delete parsed.permissionModeExpiresAt;
+      }
       return parsed;
     }
   } catch (_) { /* */ }
@@ -91,6 +110,7 @@ export function loadSettings(): AppSettings {
     backgroundBehavior: 'stop',
     maxStrengthA: DEFAULT_MAX_STRENGTH,
     maxStrengthB: DEFAULT_MAX_STRENGTH,
+    permissionMode: 'ask',
   };
 }
 

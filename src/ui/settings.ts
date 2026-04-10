@@ -9,7 +9,12 @@ import {
   DEFAULT_MAX_STRENGTH,
   MAX_STRENGTH_CEILING,
 } from '../agent/providers';
-import type { AppSettings } from '../types';
+import {
+  getEffectiveMode,
+  setMode as setPermissionMode,
+  getTimedRemainingMs,
+} from '../agent/permissions';
+import type { AppSettings, PermissionMode } from '../types';
 import * as bluetooth from '../agent/bluetooth';
 import { updateStrengthCapMarker } from './device';
 import { $ } from './index';
@@ -22,6 +27,10 @@ export function init(getPresetId: () => string, getCustomPrompt: () => string): 
   customPromptRef = getCustomPrompt;
 }
 
+// Live countdown tick for the "5 分钟免询问" option. Only runs while the
+// settings modal is open; cleaned up on close.
+let permissionCountdownTimer: number | null = null;
+
 export function open(): void {
   $('settings-modal')!.classList.remove('hidden');
   const saved = loadSettings();
@@ -29,11 +38,60 @@ export function open(): void {
   renderTabs();
   renderConfig(saved.provider);
   renderBehaviorSettings(saved);
+  startPermissionCountdown();
 }
 
 export function close(): void {
   $('settings-modal')!.classList.add('hidden');
+  stopPermissionCountdown();
   saveCurrentSettings();
+}
+
+function startPermissionCountdown(): void {
+  stopPermissionCountdown();
+  permissionCountdownTimer = window.setInterval(() => {
+    updatePermissionCountdownUI();
+  }, 1000);
+}
+
+function stopPermissionCountdown(): void {
+  if (permissionCountdownTimer != null) {
+    window.clearInterval(permissionCountdownTimer);
+    permissionCountdownTimer = null;
+  }
+}
+
+function formatMMSS(ms: number): string {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Rerender the countdown text and the active-option highlight without
+ * rebuilding the whole settings panel (which would lose focus / scroll).
+ */
+function updatePermissionCountdownUI(): void {
+  const remainEl = $('cfg-perm-timed-remain');
+  const mode = getEffectiveMode();
+  const remaining = getTimedRemainingMs();
+
+  if (remainEl) {
+    if (mode === 'timed' && remaining > 0) {
+      remainEl.textContent = `剩余 ${formatMMSS(remaining)}`;
+      remainEl.classList.remove('hidden');
+    } else {
+      remainEl.textContent = '';
+      remainEl.classList.add('hidden');
+    }
+  }
+
+  // Timed window may have expired — reflect that in the active highlight.
+  document.querySelectorAll<HTMLButtonElement>('.perm-mode-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+    btn.setAttribute('aria-checked', String(btn.dataset.mode === mode));
+  });
 }
 
 export function selectProvider(id: string): void {
@@ -221,7 +279,103 @@ function renderBehaviorSettings(saved: AppSettings): void {
   maxHint.textContent = `AI 指令的输出强度会分别被限制在 A/B 通道的上限之内（0-${MAX_STRENGTH_CEILING}），默认 ${DEFAULT_MAX_STRENGTH}`;
   section.appendChild(maxHint);
 
+  // Permission confirmation mode ------------------------------------------
+  renderPermissionModeControl(section);
+
   container.appendChild(section);
+}
+
+/**
+ * Segmented control for the three permission modes, bound to the dialog
+ * behavior: picking 'timed' or 'always' makes the dialog stop showing up
+ * until the timed window expires or the user switches back.
+ */
+function renderPermissionModeControl(parent: HTMLElement): void {
+  const wrap = document.createElement('div');
+  wrap.className = 'perm-mode-wrap';
+
+  const header = document.createElement('div');
+  header.className = 'perm-mode-header';
+
+  const headerText = document.createElement('span');
+  headerText.textContent = '工具调用确认模式';
+  header.appendChild(headerText);
+
+  const remainTag = document.createElement('span');
+  remainTag.id = 'cfg-perm-timed-remain';
+  remainTag.className = 'perm-mode-remain hidden';
+  header.appendChild(remainTag);
+
+  wrap.appendChild(header);
+
+  const group = document.createElement('div');
+  group.className = 'perm-mode-group';
+  group.setAttribute('role', 'radiogroup');
+  group.setAttribute('aria-label', '工具调用确认模式');
+
+  const currentMode = getEffectiveMode();
+
+  const options: Array<{
+    mode: PermissionMode;
+    label: string;
+    sub: string;
+    cls: string;
+  }> = [
+    { mode: 'ask',    label: '每次询问',      sub: '推荐，最安全',       cls: 'ask'    },
+    { mode: 'timed',  label: '5 分钟内免询问', sub: '到期自动恢复询问',  cls: 'timed'  },
+    { mode: 'always', label: '全部允许',      sub: '高风险，不再弹窗',   cls: 'always' },
+  ];
+
+  options.forEach((opt) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className =
+      `perm-mode-btn perm-mode-btn-${opt.cls}` +
+      (opt.mode === currentMode ? ' active' : '');
+    btn.dataset.mode = opt.mode;
+    btn.setAttribute('role', 'radio');
+    btn.setAttribute('aria-checked', String(opt.mode === currentMode));
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'perm-mode-btn-label';
+    labelEl.textContent = opt.label;
+    btn.appendChild(labelEl);
+
+    const subEl = document.createElement('div');
+    subEl.className = 'perm-mode-btn-sub';
+    subEl.textContent = opt.sub;
+    btn.appendChild(subEl);
+
+    btn.addEventListener('click', () => {
+      setPermissionMode(opt.mode);
+      // Refresh active highlight across all three buttons.
+      group.querySelectorAll<HTMLButtonElement>('.perm-mode-btn').forEach((b) => {
+        const isActive = b.dataset.mode === opt.mode;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-checked', String(isActive));
+      });
+      // Immediately refresh the countdown display (don't wait for the tick).
+      updatePermissionCountdownUI();
+    });
+
+    group.appendChild(btn);
+  });
+
+  wrap.appendChild(group);
+
+  const hint = document.createElement('p');
+  hint.className = 'provider-hint';
+  hint.innerHTML =
+    '<strong>每次询问</strong>：每个工具调用都弹窗确认。<br>' +
+    '<strong>5 分钟内免询问</strong>：选择后 5 分钟内自动允许所有工具调用，到期自动恢复为"每次询问"。<br>' +
+    '<strong>全部允许</strong>：完全跳过弹窗，AI 可以直接调用任何工具。<span style="color:#d94a4a">刷新页面或开启新对话后会自动恢复为"每次询问"，请谨慎使用。</span>';
+  wrap.appendChild(hint);
+
+  parent.appendChild(wrap);
+
+  // Initial countdown render (covers the case where user reopens settings
+  // during a still-valid timed window).
+  updatePermissionCountdownUI();
 }
 
 function normalizeCap(raw: unknown): number {

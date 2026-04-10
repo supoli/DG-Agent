@@ -3,14 +3,17 @@
  *
  * One `runTurn` invocation handles a single user turn:
  *   - Iterates LLM calls until the model produces a final assistant text
- *   - Executes tool calls between iterations
+ *   - Executes tool calls between iterations (after the permission gate)
  *   - Enforces all per-turn hard caps from `policies.ts`
  *   - Runs the hallucination guard on candidate final replies
  *   - Streams text + tool events through the AgentSink
  *
  * The runner owns one piece of state (`RunnerState`) that lives only for the
- * duration of one `runTurn` call. Nothing escapes — only the final assistant
- * text item(s) are returned for persistence.
+ * duration of one `runTurn` call. Nothing leaks out except assistant text —
+ * tool calls, tool outputs, and hallucination-correction notes stay inside
+ * the runner. When the "narrate then act" pattern is used (the model streams
+ * text before calling a tool) those narration lines ARE returned so the
+ * persisted chat history matches what the user actually saw on screen.
  */
 
 import type { AgentSink, ConversationItem, DeviceState, ToolDef } from '../types';
@@ -94,14 +97,28 @@ function newState(): RunnerState {
   };
 }
 
+/**
+ * Pick out every assistant narration line accumulated during the turn.
+ * workingItems also contains function_call / function_call_output items
+ * and the synthetic user notes used by the hallucination corrector —
+ * neither belongs in the persisted chat history.
+ */
+function collectNarrations(state: RunnerState): ConversationItem[] {
+  return state.workingItems.filter((it): it is ConversationItem =>
+    (it as any).role === 'assistant',
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Public entry point
 // ---------------------------------------------------------------------------
 
 /**
  * Run one user turn. Returns the items that should be persisted into the
- * conversation history — typically a single `{role:'assistant'}` item.
- * Tool items and correction notes stay inside the runner and never leak.
+ * conversation history: zero or more `{role:'assistant'}` narration items
+ * followed by one final `{role:'assistant'}` reply (or the iteration-ceiling
+ * sentinel). Tool items and correction notes stay inside the runner and
+ * never leak.
  */
 export async function runTurn(input: RunTurnInput): Promise<ConversationItem[]> {
   const state = newState();
@@ -147,18 +164,26 @@ export async function runTurn(input: RunTurnInput): Promise<ConversationItem[]> 
       continue;
     }
 
-    // Accept the reply. Lock the bubble and return the persistable item.
+    // Accept the reply. Lock the bubble and return every assistant message
+    // produced this turn — the "narrate then act" lines plus the final text.
     input.sink.onTextComplete();
-    return [{ role: 'assistant', content: streamedText }];
+    return [
+      ...collectNarrations(state),
+      { role: 'assistant', content: streamedText },
+    ];
   }
 
   // Iteration ceiling reached. The model spent all iterations on tool calls
   // without producing a final reply. Show a friendly sentinel so the user
-  // sees that the agent gave up rather than a silent stop.
+  // sees that the agent gave up rather than a silent stop, and keep any
+  // narration the model did emit along the way.
   const sentinel = '嗯…我这边有点绕进去了，可以换个说法再问一次吗？';
   input.sink.onTextDiscard();
   input.sink.onTextInline(sentinel);
-  return [{ role: 'assistant', content: sentinel }];
+  return [
+    ...collectNarrations(state),
+    { role: 'assistant', content: sentinel },
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -223,20 +248,19 @@ async function executeOneCall(
     });
   }
 
-  // Permission gate (may await user input via a modal dialog). Runs before
-  // any counters are touched for non-counted scenarios — but once we reach
-  // this point the model has committed to a call, so we always count it
-  // against the per-turn caps regardless of the user's decision.
+  // Permission gate. May block on a modal dialog.
   let permissionDenied = false;
   if (input.requestPermission) {
     const decision = await input.requestPermission(name, args);
     if (decision === 'deny') permissionDenied = true;
   }
 
-  // Count it (even on executor failure — the model already attempted it).
-  // Note: `mutatingToolCalled` is NOT set on a deny, so the action-claim
-  // hallucination guard still fires if the model pretends the denied
-  // operation succeeded.
+  // Always count attempted calls against the per-turn caps — a denied or
+  // failed call still burns a slot, so the model can't spam-retry to bypass
+  // MAX_TOOL_CALLS_PER_TURN. `mutatingToolCalled`, however, tracks whether
+  // the *device* was actually mutated this turn: denies leave it false so
+  // the action-claim hallucination guard still fires if the model claims
+  // success after a denial.
   state.totalToolCalls++;
   state.anyToolCalled = true;
   if (!permissionDenied && isMutatingTool(name)) state.mutatingToolCalled = true;

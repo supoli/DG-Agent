@@ -127,13 +127,6 @@ export interface PromptPreset {
   prompt: string;
 }
 
-/** Saved custom prompt */
-export interface SavedPrompt {
-  id: string;
-  name: string;
-  prompt: string;
-}
-
 /** Conversation record for persistence */
 export interface ConversationRecord {
   id: string;
@@ -143,6 +136,9 @@ export interface ConversationRecord {
   createdAt: number;
   updatedAt: number;
 }
+
+/** Permission-prompt policy for AI-initiated tool calls. */
+export type PermissionMode = 'ask' | 'timed' | 'always';
 
 /** App settings persisted in localStorage */
 export interface AppSettings {
@@ -158,6 +154,16 @@ export interface AppSettings {
   maxStrengthB?: number;
   /** @deprecated legacy single-channel cap, migrated into maxStrengthA/B on load. */
   maxStrength?: number;
+  /**
+   * How permission prompts behave for mutating tool calls:
+   *  - 'ask'    : show the dialog every call (default, safest)
+   *  - 'timed'  : silent auto-allow for a rolling 5-minute window,
+   *               auto-reverts to 'ask' on expiry
+   *  - 'always' : silent auto-allow for every mutating call
+   */
+  permissionMode?: PermissionMode;
+  /** Epoch-ms expiry for the 'timed' permission mode. Only read when permissionMode === 'timed'. */
+  permissionModeExpiresAt?: number;
 }
 
 /** Provider field definition */

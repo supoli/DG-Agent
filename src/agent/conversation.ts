@@ -1,15 +1,17 @@
 /**
  * conversation.ts — Top-level session orchestration.
  *
- * Owns:
- *   1. ConversationStore: a clean stream of user/assistant text items
- *      (no tool items, no synthetic notes — those live inside the runner)
- *   2. ChatSink: a per-sendMessage adapter that turns runner events into
- *      concrete UI callback calls and manages bubble lifecycle
- *   3. sendMessage: the only public mutation entry point
- *
- * conversation.ts no longer touches prompt strings, no longer mutates the
- * input array, no longer holds streaming state in closures.
+ * Owns three things, nothing else:
+ *   1. ConversationStore — a clean stream of `user` / `assistant` text items.
+ *      Tool calls and outputs never enter this store; they live only inside
+ *      the runner's per-turn working state.
+ *   2. ChatSink — a per-`sendMessage` adapter that turns runner events into
+ *      concrete UI callback calls and manages bubble lifecycle (stream /
+ *      finalize / discard / inline).
+ *   3. sendMessage — the single public mutation entry point. Wires up the
+ *      permission gate (per-tool grant cache + settings-level mode), the
+ *      abort controller, and the error-classification path, then hands the
+ *      whole thing to `runTurn` and pushes the returned items into the store.
  */
 
 import type { AgentSink, ConversationItem, ConversationRecord } from '../types';
@@ -23,6 +25,9 @@ import {
   requiresPermission,
   hasGrant,
   recordChoice,
+  getEffectiveMode,
+  clearAlwaysMode,
+  clearGrants,
   type PermissionChoice,
 } from './permissions';
 
@@ -107,8 +112,8 @@ function classifyError(err: any): string {
   return `出错了：${raw}`;
 }
 
-function isAbortError(err: any): boolean {
-  return err?.name === 'AbortError' || err instanceof DOMException && err.name === 'AbortError';
+function isAbortError(err: unknown): boolean {
+  return (err as { name?: string } | null)?.name === 'AbortError';
 }
 
 /** Strip non-text items (legacy data: function_call / function_call_output). */
@@ -125,10 +130,6 @@ function pruneItems(): void {
 // Read-only accessors
 // ---------------------------------------------------------------------------
 
-export function getHistory(): readonly ConversationItem[] {
-  return store.items;
-}
-
 export function getCurrentConversation(): ConversationRecord | null {
   return store.current;
 }
@@ -141,10 +142,6 @@ export function setActivePresetId(id: string): void {
   store.activePresetId = id;
 }
 
-export function getIsProcessing(): boolean {
-  return store.isProcessing;
-}
-
 export function loadConversation(conv: ConversationRecord): void {
   store.items = sanitize(conv.items);
   store.current = conv;
@@ -154,6 +151,13 @@ export function loadConversation(conv: ConversationRecord): void {
 export function startNewConversation(): void {
   store.items = [];
   store.current = null;
+  // A fresh conversation should not inherit broad trust granted earlier:
+  //   - the session-wide 'always' mode is revoked
+  //   - every per-tool grant accumulated via the dialog is wiped
+  // The 5-minute 'timed' settings mode keeps its own expiry and is left
+  // untouched here.
+  clearAlwaysMode();
+  clearGrants();
 }
 
 // ---------------------------------------------------------------------------
@@ -235,13 +239,22 @@ export async function sendMessage(text: string, customPrompt: string): Promise<v
   const abort = new AbortController();
   currentAbort = abort;
 
-  // Permission gate: consult cache first, only hit the UI on a miss, then
-  // record the user's decision before returning it to the runner.
+  // Permission gate:
+  //   1. Only mutating tools are gated at all
+  //   2. The user's chosen mode ('ask' | 'timed' | 'always') overrides everything
+  //      — 'timed' and 'always' skip the dialog entirely
+  //   3. In 'ask' mode we consult the per-tool grant cache first, only hit the
+  //      UI on a miss, then record the user's choice
   const requestPermission = async (
     name: string,
     args: Record<string, unknown>,
   ): Promise<'allow' | 'deny'> => {
     if (!requiresPermission(name)) return 'allow';
+
+    const mode = getEffectiveMode();
+    if (mode === 'always' || mode === 'timed') return 'allow';
+
+    // mode === 'ask'
     if (hasGrant(name)) return 'allow';
     if (!cb.onRequestPermission) return 'allow';
     const choice = await cb.onRequestPermission(name, args);

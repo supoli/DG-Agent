@@ -18,6 +18,17 @@ interface ActiveDialog {
 
 let active: ActiveDialog | null = null;
 
+/**
+ * Tear down the DOM + key listener for the currently open dialog, but
+ * do NOT touch its Promise. Callers are responsible for resolving.
+ */
+function destroyDialog(): void {
+  if (!active) return;
+  document.removeEventListener('keydown', active.keyHandler);
+  active.backdrop.remove();
+  active = null;
+}
+
 /** Show a permission dialog for `toolName(args)` and await the user. */
 export function askPermission(
   toolName: string,
@@ -76,8 +87,12 @@ export function askPermission(
     const buttons = document.createElement('div');
     buttons.className = 'permission-buttons';
 
+    // Settle the Promise with the user's choice. Tears down the DOM first
+    // so the outer Promise's `resolve` is the ONE and ONLY settlement —
+    // never route user clicks through closeActiveDialog(), which is the
+    // external abort path and unconditionally resolves 'deny'.
     const pick = (choice: PermissionChoice) => {
-      closeActiveDialog();
+      destroyDialog();
       resolve(choice);
     };
 
@@ -107,22 +122,13 @@ export function askPermission(
 
 /**
  * Close any currently open permission dialog and resolve it as 'deny'.
- * Safe to call if nothing is open. Called on user-initiated abort.
+ * Safe to call when nothing is open. Called on user-initiated abort.
  */
 export function closeActiveDialog(): void {
   if (!active) return;
-  const { backdrop, resolve, keyHandler } = active;
-  active = null;
-  document.removeEventListener('keydown', keyHandler);
-  backdrop.remove();
-  // Resolving AFTER nulling `active` so the caller can reopen a new dialog
-  // from inside the resolve handler without tripping the "already open" guard.
+  const { resolve } = active;
+  destroyDialog();
   resolve('deny');
-}
-
-/** True if a dialog is currently waiting for the user. */
-export function hasActiveDialog(): boolean {
-  return active !== null;
 }
 
 // ---------------------------------------------------------------------------

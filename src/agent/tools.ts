@@ -6,7 +6,7 @@
 import type { ToolDef, WaveStep } from '../types';
 import * as bt from './bluetooth';
 import { getMaxStrength } from './providers';
-import { clampStrengthLimit } from './policies';
+import { clampStrengthLimit, isMutatingTool } from './policies';
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -301,17 +301,15 @@ export const tools: ToolDef[] = registry.map((t) => t.def);
 
 const handlerMap = new Map(registry.map((t) => [t.def.name, t.handler]));
 
-// Tools that require an active BLE connection. get_status is allowed even
-// when disconnected — it just returns the unconnected state.
-const REQUIRES_CONNECTION = new Set(['play', 'stop', 'add_strength', 'design_wave', 'set_strength_limit']);
-
 export async function executeTool(name: string, args: Record<string, any>): Promise<string> {
   const handler = handlerMap.get(name);
   if (!handler) return JSON.stringify({ error: `Unknown tool: ${name}` });
 
   // Centralised disconnect guard: any mutating tool fails fast with a
-  // friendly error so the model can tell the user to reconnect.
-  if (REQUIRES_CONNECTION.has(name) && !bt.getStatus().connected) {
+  // friendly error so the model can tell the user to reconnect. Read-only
+  // tools like get_status are allowed even when disconnected — they just
+  // surface the unconnected state in their response.
+  if (isMutatingTool(name) && !bt.getStatus().connected) {
     return JSON.stringify({
       error: '设备未连接，无法执行该操作。请告知用户先在 App 内连接郊狼设备，再继续。',
       deviceState: snap(),

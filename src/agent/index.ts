@@ -1,10 +1,15 @@
 /**
- * agent/index.ts — Public API for the agent module.
+ * agent/index.ts — Public barrel for the agent module.
+ *
+ * Only re-exports the symbols the UI layer actually consumes via this
+ * barrel. Modules that live deeper (policies, runner, transport, permissions,
+ * prompts, providers, tools) are imported directly by the code that needs
+ * them — keeping this surface small makes it obvious what crosses the
+ * agent/ui boundary.
  */
 
 export * as bluetooth from './bluetooth';
 export * as history from './history';
 export * as conversation from './conversation';
-export { PROMPT_PRESETS, DEFAULT_PRESET_ID, buildInstructions } from './prompts';
-export { tools, executeTool } from './tools';
-export { PROVIDERS, loadSettings, saveSettings } from './providers';
+export { PROMPT_PRESETS } from './prompts';
+export { executeTool } from './tools';

@@ -1123,6 +1123,101 @@ html, body {
   margin: 0;
 }
 
+/* ---------- Permission confirmation mode ---------- */
+.perm-mode-wrap {
+  margin-top: 18px;
+  margin-bottom: 4px;
+}
+
+.perm-mode-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.perm-mode-remain {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.perm-mode-remain.hidden { display: none; }
+
+.perm-mode-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.perm-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px 12px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.05s;
+}
+.perm-mode-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.perm-mode-btn:active { transform: scale(0.98); }
+.perm-mode-btn.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.perm-mode-btn-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.perm-mode-btn.active .perm-mode-btn-label {
+  color: var(--accent);
+}
+.perm-mode-btn-sub {
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.3;
+}
+
+/* Warning tint for the 'always' option */
+.perm-mode-btn-always .perm-mode-btn-sub { color: #d94a4a; }
+.perm-mode-btn-always.active {
+  background: rgba(217, 74, 74, 0.08);
+  border-color: #d94a4a;
+  box-shadow: 0 0 0 2px rgba(217, 74, 74, 0.12);
+}
+.perm-mode-btn-always.active .perm-mode-btn-label { color: #d94a4a; }
+
+/* Compact layout on narrow screens — 3 pills would crush labels,
+   so stack them vertically under ~520px. */
+@media (max-width: 520px) {
+  .perm-mode-group {
+    grid-template-columns: 1fr;
+  }
+  .perm-mode-btn {
+    padding: 12px 14px;
+  }
+  .perm-mode-btn-label { font-size: 14px; }
+  .perm-mode-btn-sub { font-size: 12px; }
+}
+
 /* ---------- Toggle switch ---------- */
 .toggle-btn {
   position: relative;
