@@ -7,6 +7,9 @@ import type { ProviderDef, AppSettings } from '../types';
 
 const SETTINGS_STORAGE_KEY = 'dg-agent-settings';
 
+export const DEFAULT_MAX_STRENGTH = 50;
+export const MAX_STRENGTH_CEILING = 200;
+
 export const PROVIDERS: ProviderDef[] = [
   {
     id: 'free',
@@ -17,10 +20,10 @@ export const PROVIDERS: ProviderDef[] = [
         key: 'region',
         label: '代理线路',
         type: 'select',
-        default: 'intl',
+        default: 'cn',
         options: [
-          { value: 'intl', label: 'Cloudflare' },
           { value: 'cn', label: '阿里云' },
+          { value: 'intl', label: 'Cloudflare' },
         ],
       },
     ],
@@ -54,14 +57,49 @@ export const PROVIDERS: ProviderDef[] = [
   },
 ];
 
+function normalizeMax(v: unknown, fallback: number): number {
+  const n = typeof v === 'number' ? v : Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.min(MAX_STRENGTH_CEILING, Math.round(n)));
+}
+
 export function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as AppSettings;
+    if (raw) {
+      const parsed = JSON.parse(raw) as AppSettings;
+      // Migration: legacy single-value cap → per-channel caps.
+      const legacy =
+        typeof parsed.maxStrength === 'number' && Number.isFinite(parsed.maxStrength)
+          ? parsed.maxStrength
+          : null;
+      if (typeof parsed.maxStrengthA !== 'number' || !Number.isFinite(parsed.maxStrengthA)) {
+        parsed.maxStrengthA = legacy ?? DEFAULT_MAX_STRENGTH;
+      }
+      if (typeof parsed.maxStrengthB !== 'number' || !Number.isFinite(parsed.maxStrengthB)) {
+        parsed.maxStrengthB = legacy ?? DEFAULT_MAX_STRENGTH;
+      }
+      delete parsed.maxStrength;
+      return parsed;
+    }
   } catch (_) { /* */ }
-  return { provider: 'free', configs: {}, presetId: 'gentle', customPrompt: '', backgroundBehavior: 'stop' };
+  return {
+    provider: 'free',
+    configs: {},
+    presetId: 'gentle',
+    customPrompt: '',
+    backgroundBehavior: 'stop',
+    maxStrengthA: DEFAULT_MAX_STRENGTH,
+    maxStrengthB: DEFAULT_MAX_STRENGTH,
+  };
 }
 
 export function saveSettings(settings: AppSettings): void {
   try { localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings)); } catch (_) { /* */ }
+}
+
+/** Read the user-configured max strength cap for one channel (0-200). */
+export function getMaxStrength(channel: 'A' | 'B'): number {
+  const s = loadSettings();
+  return normalizeMax(channel === 'A' ? s.maxStrengthA : s.maxStrengthB, DEFAULT_MAX_STRENGTH);
 }

@@ -135,6 +135,12 @@ export interface AppSettings {
   customPrompt: string;
   /** Behavior when app goes to background: 'stop' = stop all output, 'keep' = no change */
   backgroundBehavior?: 'stop' | 'keep';
+  /** Hard upper bound on channel A output strength (0-200), enforced in-browser. */
+  maxStrengthA?: number;
+  /** Hard upper bound on channel B output strength (0-200), enforced in-browser. */
+  maxStrengthB?: number;
+  /** @deprecated legacy single-channel cap, migrated into maxStrengthA/B on load. */
+  maxStrength?: number;
 }
 
 /** Provider field definition */

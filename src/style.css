@@ -258,12 +258,25 @@ html, body {
 
 .strength-bar {
   flex: 1;
+  position: relative;
   height: 6px;
   background: var(--border);
   border-radius: 3px;
-  overflow: hidden;
   min-width: 50px;
   transition: background-color var(--transition);
+}
+
+.strength-cap {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  left: 25%;
+  transform: translateX(-1px);
+  background: #ff3b30;
+  border-radius: 1px;
+  pointer-events: none;
+  box-shadow: 0 0 2px rgba(255, 59, 48, 0.6);
 }
 
 .strength-fill {
@@ -1002,6 +1015,112 @@ html, body {
   margin-bottom: 8px;
 }
 
+/* ---------- Max-strength stepper ---------- */
+.max-strength-wrap {
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+
+.max-strength-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.max-strength-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.strength-stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.strength-stepper:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.strength-stepper-channel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.strength-stepper-control {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.strength-stepper-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition), color var(--transition);
+  padding: 0;
+}
+
+.strength-stepper-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.strength-stepper-btn:active {
+  background: var(--accent-hover);
+}
+
+.strength-stepper-input {
+  width: 44px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  padding: 0;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.strength-stepper-input::-webkit-outer-spin-button,
+.strength-stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 /* ---------- Toggle switch ---------- */
 .toggle-btn {
   position: relative;
@@ -1222,5 +1341,188 @@ html, body {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   Safety notice modal (shown on every page load)
+   ============================================================ */
+.safety-notice {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+  animation: safety-fade-in 0.25s ease-out;
+  overscroll-behavior: contain;
+}
+
+/* Lock background scroll while safety notice is visible. */
+body.safety-notice-open {
+  overflow: hidden;
+  touch-action: none;
+}
+
+.safety-notice.hidden {
+  display: none;
+}
+
+@keyframes safety-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.safety-notice-card {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: safety-slide-up 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes safety-slide-up {
+  from { transform: translateY(16px) scale(0.98); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.safety-notice-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--accent-soft), transparent);
+}
+
+.safety-notice-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.safety-notice-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.safety-notice-title h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.safety-notice-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.safety-notice-body h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 18px 0 8px;
+}
+
+.safety-notice-body h3:first-of-type {
+  margin-top: 12px;
+}
+
+.safety-notice-body p {
+  margin: 0 0 10px;
+}
+
+.safety-notice-body ol,
+.safety-notice-body ul {
+  margin: 0 0 10px;
+  padding-left: 22px;
+}
+
+.safety-notice-body li {
+  margin-bottom: 6px;
+}
+
+.safety-callout {
+  background: rgba(255, 59, 48, 0.08);
+  border-left: 3px solid #ff3b30;
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin: 12px 0;
+  color: var(--text);
+}
+
+.safety-callout ul {
+  margin: 8px 0 0;
+}
+
+.safety-notice-footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
+  background: var(--surface);
+}
+
+.safety-notice-btn {
+  min-width: 220px;
+  height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 10px;
+  transition: opacity var(--transition), transform var(--transition), background var(--transition);
+}
+
+.safety-notice-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--border);
+  color: var(--text-2);
+}
+
+.safety-notice-btn:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.safety-notice-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+@media (max-width: 600px) {
+  .safety-notice-card {
+    max-height: 94vh;
+    border-radius: 12px;
+  }
+  .safety-notice-header,
+  .safety-notice-body,
+  .safety-notice-footer {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .safety-notice-btn {
+    min-width: 0;
+    width: 100%;
   }
 }

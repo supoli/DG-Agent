@@ -48,13 +48,19 @@
       <div class="channel" id="channel-a">
         <span class="channel-label">A</span>
         <span class="wave-indicator hidden" id="wave-a"></span>
-        <div class="strength-bar"><div class="strength-fill" id="strength-a"></div></div>
+        <div class="strength-bar">
+          <div class="strength-fill" id="strength-a"></div>
+          <div class="strength-cap" id="strength-cap-a" title="最大强度上限"></div>
+        </div>
         <span class="strength-value" id="strength-a-val">0</span>
       </div>
       <div class="channel" id="channel-b">
         <span class="channel-label">B</span>
         <span class="wave-indicator hidden" id="wave-b"></span>
-        <div class="strength-bar"><div class="strength-fill" id="strength-b"></div></div>
+        <div class="strength-bar">
+          <div class="strength-fill" id="strength-b"></div>
+          <div class="strength-cap" id="strength-cap-b" title="最大强度上限"></div>
+        </div>
         <span class="strength-value" id="strength-b-val">0</span>
       </div>
       <div class="battery" id="battery">
@@ -155,6 +161,82 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== Safety notice (shown on every page load) ===== -->
+  <div id="safety-notice" class="safety-notice">
+    <div class="safety-notice-card">
+      <header class="safety-notice-header">
+        <div class="safety-notice-title">
+          <span class="safety-notice-icon">⚠️</span>
+          <h2>AI 郊狼 安全须知</h2>
+        </div>
+      </header>
+      <div class="safety-notice-body">
+        <p>请保证在安全、清醒、自愿的情况下使用本产品，并将其放置于未成年人接触不到的地方。</p>
+
+        <div class="safety-callout">
+          <strong>⚠️ 特别警告：</strong>本产品由 AI 驱动，AI 生成的波形和强度存在不可预测性。AI 可能出现判断偏差、输出异常或响应延迟等问题，请始终保持警惕，从最低强度开始使用，并随时准备手动停止设备。切勿完全依赖 AI 的自动调节，您自身的感受是唯一可靠的安全标准。
+        </div>
+
+        <h3>一、禁用人群</h3>
+        <p>以下人群严禁使用本产品：</p>
+        <ol>
+          <li>佩戴心脏起搏器，或体内有电子/金属植入物者——电刺激可能影响起搏器或植入物正常功能。</li>
+          <li>癫痫、哮喘、心脏病、血栓及其他心脑血管疾病患者——感官刺激可能诱发或加重症状。</li>
+          <li>皮肤敏感、皮炎及其他皮肤疾病患者——可能使皮肤病症状加重。</li>
+          <li>有出血倾向性疾病的患者——电刺激会使局部毛细血管扩张，可能诱发出血。</li>
+          <li>未成年人、孕妇、知觉异常及无表达意识能力的人群。</li>
+          <li>肢体运动障碍及其他无法及时操作产品的人群——可能在感到不适时无法及时停止输出。</li>
+          <li>正在接受治疗或身体不适的人群。</li>
+        </ol>
+
+        <h3>二、禁用部位</h3>
+        <ol>
+          <li>胸部及心脏区域——严禁将电极置于胸部；绝对禁止将两电极分别置于心脏投影区前后、左右或任何可能使电流流经心脏的位置。</li>
+          <li>头部、面部、眼部、口腔、颈部及颈动脉窦附近。</li>
+          <li>皮肤破损或水肿处、关节扭伤挫伤处、肌肉拉伤处、炎症/感染病灶处，或未完全愈合的伤口附近。</li>
+        </ol>
+
+        <h3>三、使用注意事项</h3>
+        <ol>
+          <li>严禁在同一部位连续使用超过 30 分钟，长时间使用可能导致局部红肿或知觉减弱等损伤。</li>
+          <li>严禁在输出状态下移动电极。移动或更换电极时必须先停止输出，避免接触面积变化导致刺痛或灼伤。</li>
+          <li>严禁在驾驶或操作机器等危险情况下使用，以避免受脉冲影响而失去控制。</li>
+          <li>严禁将电极导线插入产品主机导线插孔之外的地方（如电源插座等）。</li>
+          <li>严禁在具有易燃易爆物质的场合使用。</li>
+          <li>请勿同时使用多台产品。</li>
+          <li>请勿私自拆卸或修理产品主机，可能会引起故障或意料外的输出。</li>
+          <li>请勿在浴室等潮湿环境使用。</li>
+          <li>使用过程中请勿使两电极互相接触短路，可能导致感受减弱、刺痛灼伤或损坏设备。</li>
+          <li>电极使用时必须与皮肤充分紧密接触。接触面积过小可能导致刺痛或灼伤；面积过大则可能电感微弱。</li>
+          <li>产品内含锂电池，禁止拆解、挤压或投入火中。若产品出现故障或异常发热，请勿继续使用。</li>
+        </ol>
+
+        <h3>四、AI 相关风险与重要提示</h3>
+        <div class="safety-callout">
+          <strong>⚠️ AI 并非绝对可靠。</strong>本产品使用 AI 控制输出波形，但 AI 存在以下固有风险：
+          <ul>
+            <li><strong>输出异常：</strong>AI 可能生成超出预期的波形或突然改变强度，造成不适甚至伤害。</li>
+            <li><strong>判断偏差：</strong>AI 无法真正感知您的身体状态，其自动调节不能替代您本人的判断。</li>
+            <li><strong>软件故障：</strong>任何软件都可能出现 Bug、崩溃或延迟响应，请随时准备通过物理方式断开设备。</li>
+            <li><strong>网络依赖：</strong>若产品依赖网络连接，网络波动可能导致控制中断或行为异常。</li>
+          </ul>
+        </div>
+        <p><strong>使用建议：</strong></p>
+        <ol>
+          <li><strong>首次使用请先试用</strong>——在新部位使用或更换新电极时，请先以最低强度试用 10 分钟，等待确认无异常后方可继续。</li>
+          <li><strong>注意感受适应现象</strong>——身体对脉冲刺激的感受会逐渐变弱，您可能不自觉地持续增加强度。这可能导致真实刺激已超过安全范围却未被感知。虽然产品最高输出低于安全标准限制（r.m.s &lt; 50mA, 500Ω），但长时间使用仍可能造成损伤。请严格遵守 30 分钟连续使用时长限制。</li>
+          <li><strong>推荐使用间歇式波形</strong>——连续高频刺激会使身体快速适应。建议使用频率变化且间歇休息的波形，每段刺激 1-10 秒，休息 1-10 秒为宜。</li>
+          <li><strong>永远不要完全信任 AI 的输出</strong>——请将 AI 视为辅助工具而非安全保障，您本人是安全的第一责任人。</li>
+        </ol>
+      </div>
+      <footer class="safety-notice-footer">
+        <button id="safety-notice-accept" class="btn-primary safety-notice-btn" disabled>
+          请阅读须知 <span id="safety-notice-countdown">(10s)</span>
+        </button>
+      </footer>
     </div>
   </div>
 

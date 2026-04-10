@@ -264,8 +264,8 @@ export async function chat(
   const config = { ...(settings.configs?.[providerId] || {}) };
 
   if (providerId === 'free') {
-    const region = config.region || 'intl';
-    config.baseUrl = region === 'cn' ? FREE_PROXY_URL_CN : FREE_PROXY_URL;
+    const region = config.region || 'cn';
+    config.baseUrl = region === 'intl' ? FREE_PROXY_URL : FREE_PROXY_URL_CN;
     config.apiKey = 'free';
     config.model = 'qwen3.5-flash';
   } else if (providerId === 'qwen' && !config.baseUrl) {

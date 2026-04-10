@@ -3,10 +3,25 @@
  */
 
 import type { DeviceState } from '../types';
+import { getMaxStrength } from '../agent/providers';
 import { $ } from './index';
+
+const STRENGTH_SCALE_MAX = 200;
+
+export function updateStrengthCapMarker(): void {
+  const capAVal = getMaxStrength('A');
+  const capBVal = getMaxStrength('B');
+  const pctA = Math.max(0, Math.min(100, (capAVal / STRENGTH_SCALE_MAX) * 100));
+  const pctB = Math.max(0, Math.min(100, (capBVal / STRENGTH_SCALE_MAX) * 100));
+  const capA = $('strength-cap-a') as HTMLDivElement | null;
+  const capB = $('strength-cap-b') as HTMLDivElement | null;
+  if (capA) capA.style.left = pctA + '%';
+  if (capB) capB.style.left = pctB + '%';
+}
 
 export function updateDeviceUI(status: DeviceState): void {
   if (!status) return;
+  updateStrengthCapMarker();
 
   const statusDot = $('device-status') as HTMLSpanElement;
   const deviceBar = $('device-bar') as HTMLDivElement;

@@ -5,6 +5,7 @@
 
 import type { ToolDef, WaveStep } from '../types';
 import * as bt from './bluetooth';
+import { getMaxStrength } from './providers';
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -19,9 +20,11 @@ function snap() {
 
 function clamp(value: number, channel: string): { value: number; limited: boolean } {
   const limits = bt.getStrengthLimits();
-  const limit = channel.toUpperCase() === 'A' ? limits.limitA : limits.limitB;
+  const ch = channel.toUpperCase() === 'A' ? 'A' : 'B';
+  const deviceLimit = ch === 'A' ? limits.limitA : limits.limitB;
+  const effectiveLimit = Math.min(deviceLimit, getMaxStrength(ch));
   const v = num(value, 0);
-  const clamped = Math.min(Math.max(0, v), limit);
+  const clamped = Math.min(Math.max(0, v), effectiveLimit);
   return { value: clamped, limited: clamped !== v };
 }
 

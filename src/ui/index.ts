@@ -271,7 +271,43 @@ async function handleSendMessage(text: string): Promise<void> {
 // Boot
 // ---------------------------------------------------------------------------
 
+function showSafetyNotice(): void {
+  const modal = $('safety-notice') as HTMLDivElement | null;
+  const btn = $('safety-notice-accept') as HTMLButtonElement | null;
+  const countdownEl = $('safety-notice-countdown') as HTMLSpanElement | null;
+  if (!modal || !btn || !countdownEl) return;
+
+  modal.classList.remove('hidden');
+  document.body.classList.add('safety-notice-open');
+
+  const TOTAL = 10;
+  let remaining = TOTAL;
+  btn.disabled = true;
+  countdownEl.textContent = `(${remaining}s)`;
+
+  const timer = setInterval(() => {
+    remaining -= 1;
+    if (remaining > 0) {
+      countdownEl.textContent = `(${remaining}s)`;
+    } else {
+      clearInterval(timer);
+      btn.disabled = false;
+      btn.firstChild!.textContent = '我已阅读并同意 ';
+      countdownEl.textContent = '';
+    }
+  }, 1000);
+
+  btn.addEventListener('click', () => {
+    if (btn.disabled) return;
+    modal.classList.add('hidden');
+    document.body.classList.remove('safety-notice-open');
+  });
+}
+
 export function boot(): void {
+  // Mandatory safety notice — shown on every page load, 10s lockout.
+  showSafetyNotice();
+
   // Register conversation callbacks (agent → UI bridge)
   conversation.registerCallbacks({
     onUserMessage: (text) => chat.addUserMessage(text),
