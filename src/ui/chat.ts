@@ -13,14 +13,27 @@ let chatContainer: HTMLDivElement;
 let userScrolledUp = false;
 let typingEl: HTMLDivElement | null = null;
 let msgCounter = 0;
+let isBusy = false;
+let onAbortCb: (() => void) | null = null;
+
+// -- Icons --
+const SEND_ICON_SVG =
+  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+const STOP_ICON_SVG =
+  '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>';
 
 // -- Initialise --
 
-export function initChat(opts: { onSendMessage: (text: string) => void }): void {
+export function initChat(opts: {
+  onSendMessage: (text: string) => void;
+  onAbort?: () => void;
+}): void {
   messagesEl = document.getElementById('messages') as HTMLDivElement;
   inputEl = document.getElementById('user-input') as HTMLTextAreaElement;
   sendBtn = document.getElementById('btn-send') as HTMLButtonElement;
   chatContainer = document.getElementById('chat-container') as HTMLDivElement;
+
+  onAbortCb = opts.onAbort || null;
 
   // Auto-resize textarea
   inputEl.addEventListener('input', () => {
@@ -28,15 +41,22 @@ export function initChat(opts: { onSendMessage: (text: string) => void }): void 
     inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
   });
 
-  // Send on Enter (Shift+Enter = newline)
+  // Send on Enter (Shift+Enter = newline). Disabled while busy.
   inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      dispatchSend(opts.onSendMessage);
+      if (!isBusy) dispatchSend(opts.onSendMessage);
     }
   });
 
-  sendBtn.addEventListener('click', () => dispatchSend(opts.onSendMessage));
+  // Send button doubles as stop button while a turn is in flight.
+  sendBtn.addEventListener('click', () => {
+    if (isBusy) {
+      if (onAbortCb) onAbortCb();
+    } else {
+      dispatchSend(opts.onSendMessage);
+    }
+  });
 
   // Track whether user has scrolled away from bottom
   chatContainer.addEventListener('scroll', () => {
@@ -55,10 +75,19 @@ function dispatchSend(onSendMessage: (text: string) => void): void {
 
 // -- Public helpers --
 
-/** Disable / enable the send button and input */
-export function setInputEnabled(enabled: boolean): void {
-  sendBtn.disabled = !enabled;
-  inputEl.disabled = !enabled;
+/**
+ * Toggle the chat into "busy" mode:
+ *  - busy=true  → input disabled, send button turns into a stop button
+ *  - busy=false → input enabled, send button restored
+ */
+export function setChatBusy(busy: boolean): void {
+  isBusy = busy;
+  inputEl.disabled = busy;
+  sendBtn.disabled = false; // always clickable — either sends or aborts
+  sendBtn.innerHTML = busy ? STOP_ICON_SVG : SEND_ICON_SVG;
+  sendBtn.title = busy ? '停止本次回复' : '发送';
+  sendBtn.setAttribute('aria-label', busy ? '停止本次回复' : '发送');
+  sendBtn.classList.toggle('busy', busy);
 }
 
 // -- Message rendering --

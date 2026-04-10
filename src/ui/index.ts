@@ -262,10 +262,13 @@ function showWelcomeMessage(): void {
 // ---------------------------------------------------------------------------
 
 async function handleSendMessage(text: string): Promise<void> {
-  chat.setInputEnabled(false);
+  chat.setChatBusy(true);
   const customPrompt = ($('custom-system-prompt') as HTMLTextAreaElement | null)?.value || '';
-  await conversation.sendMessage(text, customPrompt);
-  chat.setInputEnabled(true);
+  try {
+    await conversation.sendMessage(text, customPrompt);
+  } finally {
+    chat.setChatBusy(false);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -318,12 +321,15 @@ export function boot(): void {
     onToolCall: (name, args, result) => chat.addToolNotification(name, args, result),
     onTypingStart: () => chat.showTyping(),
     onTypingEnd: () => chat.hideTyping(),
-    onError: (msg) => chat.addAssistantMessage(`出错了: ${msg}`),
+    onError: (msg) => chat.addAssistantMessage(msg),
     onHistoryChange: () => sidebar.renderList(),
   });
 
   // Init sub-modules
-  chat.initChat({ onSendMessage: handleSendMessage });
+  chat.initChat({
+    onSendMessage: handleSendMessage,
+    onAbort: () => conversation.abortCurrent(),
+  });
   settings.init(
     () => conversation.getActivePresetId(),
     () => ($('custom-system-prompt') as HTMLTextAreaElement | null)?.value || '',

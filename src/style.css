@@ -658,6 +658,8 @@ html, body {
 #btn-send:hover { filter: brightness(1.08); }
 #btn-send:active { transform: scale(0.93); }
 #btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+#btn-send.busy { background: #d94a4a; }
+#btn-send.busy:hover { filter: brightness(1.12); }
 
 /* ============================================================
    DROPDOWNS (scene / provider)

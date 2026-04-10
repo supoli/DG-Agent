@@ -55,6 +55,46 @@ const store = {
   activePresetId: 'gentle',
 };
 
+/** Abort controller for the currently in-flight sendMessage, if any. */
+let currentAbort: AbortController | null = null;
+
+/**
+ * Cancel the in-flight turn. Safe to call even if nothing is running.
+ * The sendMessage promise will resolve (not reject) — the cancellation
+ * is reported as a short assistant note in the conversation.
+ */
+export function abortCurrent(): void {
+  if (currentAbort) currentAbort.abort();
+}
+
+// ---------------------------------------------------------------------------
+// Error classification — turn raw transport errors into human messages
+// ---------------------------------------------------------------------------
+
+function classifyError(err: any): string {
+  const raw = err?.message || String(err ?? 'unknown');
+  if (/API key is required/i.test(raw)) {
+    return '还没有配置 API Key，请在右上角 ⚙️ 设置中填写。';
+  }
+  const m = raw.match(/API error (\d{3})/);
+  if (m) {
+    const code = Number(m[1]);
+    if (code === 401) return 'API Key 无效或已过期，请在设置中检查。';
+    if (code === 403) return 'API 访问被拒绝（权限不足或地区限制），请检查账号或代理。';
+    if (code === 429) return '请求过于频繁，已被限流，请稍后再试。';
+    if (code >= 500) return 'AI 服务暂时不可用，请稍后重试。';
+    if (code === 400) return '请求被服务端拒绝（参数或模型不支持），请检查设置。';
+  }
+  if (/Failed to fetch|NetworkError|TypeError: network|net::/i.test(raw)) {
+    return '网络连接失败，请检查网络或代理后重试。';
+  }
+  return `出错了：${raw}`;
+}
+
+function isAbortError(err: any): boolean {
+  return err?.name === 'AbortError' || err instanceof DOMException && err.name === 'AbortError';
+}
+
 /** Strip non-text items (legacy data: function_call / function_call_output). */
 function sanitize(items: readonly ConversationItem[]): ConversationItem[] {
   return items.filter((it: any) => it.role === 'user' || it.role === 'assistant');
@@ -176,6 +216,9 @@ export async function sendMessage(text: string, customPrompt: string): Promise<v
   const sink = new ChatSink(cb);
   cb.onTypingStart();
 
+  const abort = new AbortController();
+  currentAbort = abort;
+
   try {
     const finalItems = await runTurn({
       conversationItems: store.items,
@@ -191,20 +234,30 @@ export async function sendMessage(text: string, customPrompt: string): Promise<v
       executor: executeTool,
       transportConfig: resolveProviderConfig(),
       sink,
+      signal: abort.signal,
     });
 
     store.items.push(...finalItems);
   } catch (err: any) {
-    console.error('[conversation] runTurn failed:', err);
-    // Drop any in-flight streamed bubble before showing the error so the
-    // user doesn't see a half-finished message hanging above the error.
+    // Drop any in-flight streamed bubble regardless of the failure mode.
     sink.discardPendingBubble();
-    const message = err?.message || String(err);
-    cb.onError(message);
-    // Persist the error as an assistant item so reloads show a complete
-    // user/assistant pair instead of an orphan user message at the tail.
-    store.items.push({ role: 'assistant', content: `出错了: ${message}` });
+
+    if (isAbortError(err) || abort.signal.aborted) {
+      // User pressed stop. Render a short note, persist it so reloads show
+      // a complete pair, but do NOT emit cb.onError (not a real error).
+      const note = '⏹ 已手动中止';
+      sink.onTextInline(note);
+      store.items.push({ role: 'assistant', content: note });
+    } else {
+      console.error('[conversation] runTurn failed:', err);
+      const friendly = classifyError(err);
+      cb.onError(friendly);
+      // Persist as assistant item so reloads show a complete user/assistant
+      // pair instead of an orphan user message at the tail.
+      store.items.push({ role: 'assistant', content: friendly });
+    }
   } finally {
+    currentAbort = null;
     cb.onTypingEnd();
 
     if (store.current) {

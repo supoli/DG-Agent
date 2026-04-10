@@ -88,6 +88,7 @@ export async function callResponses(
   tools: ToolDef[],
   config: TransportConfig,
   onTextDelta?: (accumulated: string) => void,
+  signal?: AbortSignal,
 ): Promise<ResponsesCallResult> {
   if (!config.apiKey) throw new Error('API key is required');
 
@@ -109,6 +110,7 @@ export async function callResponses(
       Authorization: `Bearer ${config.apiKey}`,
     },
     body: JSON.stringify(body),
+    signal,
   });
 
   if (!res.ok) {

@@ -44,6 +44,14 @@ export interface RunTurnInput {
   transportConfig: TransportConfig;
   /** UI sink for streaming + tool notifications. */
   sink: AgentSink;
+  /** Optional cancel signal — honoured at loop start and inside fetch. */
+  signal?: AbortSignal;
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new DOMException('Aborted', 'AbortError');
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -89,6 +97,8 @@ export async function runTurn(input: RunTurnInput): Promise<ConversationItem[]> 
   const state = newState();
 
   for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
+    throwIfAborted(input.signal);
+
     const deviceStatus = input.getDeviceStatus();
     const instructions = input.buildInstructions(deviceStatus, iter === 0);
     const llmInput: ConversationItem[] = [
@@ -102,6 +112,7 @@ export async function runTurn(input: RunTurnInput): Promise<ConversationItem[]> 
       input.tools,
       input.transportConfig,
       input.sink.onTextDelta.bind(input.sink),
+      input.signal,
     );
 
     const fnCalls = outputItems.filter((o: any) => o.type === 'function_call');
@@ -132,9 +143,9 @@ export async function runTurn(input: RunTurnInput): Promise<ConversationItem[]> 
   }
 
   // Iteration ceiling reached. The model spent all iterations on tool calls
-  // without producing a final reply. Show an explicit sentinel so the user
+  // without producing a final reply. Show a friendly sentinel so the user
   // sees that the agent gave up rather than a silent stop.
-  const sentinel = '[已达本回合工具调用上限，请重新发起对话]';
+  const sentinel = '嗯…我这边有点绕进去了，可以换个说法再问一次吗？';
   input.sink.onTextDiscard();
   input.sink.onTextInline(sentinel);
   return [{ role: 'assistant', content: sentinel }];
