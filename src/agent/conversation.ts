@@ -121,6 +121,23 @@ function sanitize(items: readonly ConversationItem[]): ConversationItem[] {
   return items.filter((it: any) => it.role === 'user' || it.role === 'assistant');
 }
 
+/**
+ * Pick the tail of the conversation to send to the LLM: the previous user
+ * turn's full exchange (its user message plus every assistant item it
+ * produced, including any "narrate then act" bubbles) followed by the
+ * just-pushed current user message. On the very first turn there is no
+ * prior exchange and we return just the current user message.
+ */
+function tailWithPrevExchange(items: readonly ConversationItem[]): ConversationItem[] {
+  const lastIdx = items.length - 1;
+  for (let i = lastIdx - 1; i >= 0; i--) {
+    if ((items[i] as any).role === 'user') {
+      return items.slice(i);
+    }
+  }
+  return items.slice(lastIdx);
+}
+
 function pruneItems(): void {
   if (store.items.length <= MAX_ITEMS) return;
   store.items.splice(0, store.items.length - MAX_ITEMS);
@@ -210,8 +227,6 @@ class ChatSink implements AgentSink {
     // If there was streamed text before the tool call ("narrate then act"),
     // lock that bubble in before showing the tool notification.
     this.onTextComplete();
-    console.log(`[Tool → ${name}]`, JSON.stringify(args));
-    console.log(`[Tool ← ${name}]`, result);
     this.cb.onToolCall(name, args, result);
     this.cb.onTypingStart();
   }
@@ -263,7 +278,10 @@ export async function sendMessage(text: string, customPrompt: string): Promise<v
 
   try {
     const finalItems = await runTurn({
-      conversationItems: store.items,
+      // Keep only the previous exchange (prior user + its reply) plus the
+      // current user message. store.items still holds the full history for
+      // UI / localStorage; we only trim what goes up to the LLM.
+      conversationItems: tailWithPrevExchange(store.items),
       buildInstructions: (deviceStatus, isFirstIteration, turnToolCalls) =>
         buildInstructions({
           presetId: store.activePresetId,

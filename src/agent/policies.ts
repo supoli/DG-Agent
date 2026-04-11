@@ -12,10 +12,10 @@
 // ---------------------------------------------------------------------------
 
 /** Hard ceiling on tool-loop iterations within a single user turn. */
-export const MAX_TOOL_ITERATIONS = 8;
+export const MAX_TOOL_ITERATIONS = 5;
 
 /** Hard ceiling on total tool calls (any tool) within a single user turn. */
-export const MAX_TOOL_CALLS_PER_TURN = 8;
+export const MAX_TOOL_CALLS_PER_TURN = 5;
 
 /** Hard ceiling on adjust_strength calls within a single user turn. */
 export const MAX_ADJUST_STRENGTH_PER_TURN = 2;

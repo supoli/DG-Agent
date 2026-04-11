@@ -31,14 +31,51 @@ export function init(getPresetId: () => string, getCustomPrompt: () => string): 
 // settings modal is open; cleaned up on close.
 let permissionCountdownTimer: number | null = null;
 
+type TopTab = 'api' | 'security';
+let activeTopTab: TopTab = 'security';
+
 export function open(): void {
   $('settings-modal')!.classList.remove('hidden');
   const saved = loadSettings();
+  activeTopTab = 'security';
   updateCurrentAiLabel();
+  renderTopTabs();
   renderTabs();
   renderConfig(saved.provider);
   renderBehaviorSettings(saved);
+  updateTopPanelVisibility();
   startPermissionCountdown();
+}
+
+function renderTopTabs(): void {
+  const container = $('settings-top-tabs')!;
+  container.innerHTML = '';
+
+  const tabs: Array<{ id: TopTab; label: string }> = [
+    { id: 'security', label: '安全' },
+    { id: 'api', label: 'API' },
+  ];
+
+  tabs.forEach((t) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'provider-tab' + (t.id === activeTopTab ? ' active' : '');
+    btn.textContent = t.label;
+    btn.dataset.tab = t.id;
+    btn.addEventListener('click', () => {
+      activeTopTab = t.id;
+      container.querySelectorAll<HTMLButtonElement>('.provider-tab').forEach((b) => {
+        b.classList.toggle('active', b.dataset.tab === t.id);
+      });
+      updateTopPanelVisibility();
+    });
+    container.appendChild(btn);
+  });
+}
+
+function updateTopPanelVisibility(): void {
+  $('settings-panel-api')!.classList.toggle('hidden', activeTopTab !== 'api');
+  $('settings-panel-security')!.classList.toggle('hidden', activeTopTab !== 'security');
 }
 
 export function close(): void {
@@ -101,7 +138,6 @@ export function selectProvider(id: string): void {
 
   renderTabs();
   renderConfig(id);
-  renderBehaviorSettings(saved);
   updateCurrentAiLabel();
 }
 
@@ -133,51 +169,10 @@ export function getBackgroundBehavior(): 'stop' | 'keep' {
 }
 
 function renderBehaviorSettings(saved: AppSettings): void {
-  const container = $('provider-config')!;
+  const container = $('security-config')!;
+  container.innerHTML = '';
 
   const section = document.createElement('div');
-  section.className = 'behavior-settings';
-
-  const title = document.createElement('h3');
-  title.className = 'behavior-settings-title';
-  title.textContent = '安全设置';
-  section.appendChild(title);
-
-  const group = document.createElement('div');
-  group.className = 'setting-group setting-group-inline';
-
-  const label = document.createElement('label');
-  label.textContent = '切换后台时停止输出';
-  label.htmlFor = 'cfg-bg-behavior';
-
-  const toggle = document.createElement('button');
-  toggle.id = 'cfg-bg-behavior';
-  const isStop = (saved.backgroundBehavior || 'stop') === 'stop';
-  toggle.className = 'toggle-btn' + (isStop ? ' active' : '');
-  toggle.setAttribute('role', 'switch');
-  toggle.setAttribute('aria-checked', String(isStop));
-
-  const knob = document.createElement('span');
-  knob.className = 'toggle-knob';
-  toggle.appendChild(knob);
-
-  toggle.addEventListener('click', () => {
-    const current = toggle.classList.contains('active');
-    toggle.classList.toggle('active', !current);
-    toggle.setAttribute('aria-checked', String(!current));
-    const s = loadSettings();
-    s.backgroundBehavior = current ? 'keep' : 'stop';
-    persistSettings(s);
-  });
-
-  group.appendChild(label);
-  group.appendChild(toggle);
-  section.appendChild(group);
-
-  const hint = document.createElement('p');
-  hint.className = 'provider-hint';
-  hint.textContent = '开启后，切换到其他应用或标签页时将自动停止所有波形并将强度归零';
-  section.appendChild(hint);
 
   // Max strength caps (per channel) ----------------------------------------
   const capsWrap = document.createElement('div');
@@ -274,15 +269,58 @@ function renderBehaviorSettings(saved: AppSettings): void {
   capsWrap.appendChild(capsRow);
   section.appendChild(capsWrap);
 
-  const maxHint = document.createElement('p');
-  maxHint.className = 'provider-hint';
-  maxHint.textContent = `AI 指令的输出强度会分别被限制在 A/B 通道的上限之内（0-${MAX_STRENGTH_CEILING}），默认 ${DEFAULT_MAX_STRENGTH}`;
-  section.appendChild(maxHint);
-
   // Permission confirmation mode ------------------------------------------
   renderPermissionModeControl(section);
 
+  // Background behavior ---------------------------------------------------
+  renderBackgroundBehaviorControl(section, saved);
+
   container.appendChild(section);
+}
+
+function renderBackgroundBehaviorControl(parent: HTMLElement, saved: AppSettings): void {
+  const wrap = document.createElement('div');
+  wrap.className = 'bg-behavior-wrap';
+
+  const header = document.createElement('div');
+  header.className = 'perm-mode-header';
+  const headerText = document.createElement('span');
+  headerText.textContent = '后台行为';
+  header.appendChild(headerText);
+  wrap.appendChild(header);
+
+  const group = document.createElement('div');
+  group.className = 'setting-group setting-group-inline';
+
+  const label = document.createElement('label');
+  label.textContent = '切换后台时停止输出';
+  label.htmlFor = 'cfg-bg-behavior';
+
+  const toggle = document.createElement('button');
+  toggle.id = 'cfg-bg-behavior';
+  const isStop = (saved.backgroundBehavior || 'stop') === 'stop';
+  toggle.className = 'toggle-btn' + (isStop ? ' active' : '');
+  toggle.setAttribute('role', 'switch');
+  toggle.setAttribute('aria-checked', String(isStop));
+
+  const knob = document.createElement('span');
+  knob.className = 'toggle-knob';
+  toggle.appendChild(knob);
+
+  toggle.addEventListener('click', () => {
+    const current = toggle.classList.contains('active');
+    toggle.classList.toggle('active', !current);
+    toggle.setAttribute('aria-checked', String(!current));
+    const s = loadSettings();
+    s.backgroundBehavior = current ? 'keep' : 'stop';
+    persistSettings(s);
+  });
+
+  group.appendChild(label);
+  group.appendChild(toggle);
+  wrap.appendChild(group);
+
+  parent.appendChild(wrap);
 }
 
 /**
@@ -362,14 +400,6 @@ function renderPermissionModeControl(parent: HTMLElement): void {
   });
 
   wrap.appendChild(group);
-
-  const hint = document.createElement('p');
-  hint.className = 'provider-hint';
-  hint.innerHTML =
-    '<strong>每次询问</strong>：每个工具调用都弹窗确认。<br>' +
-    '<strong>5 分钟内免询问</strong>：选择后 5 分钟内自动允许所有工具调用，到期自动恢复为"每次询问"。<br>' +
-    '<strong>全部允许</strong>：完全跳过弹窗，AI 可以直接调用任何工具。<span style="color:#d94a4a">刷新页面或开启新对话后会自动恢复为"每次询问"，请谨慎使用。</span>';
-  wrap.appendChild(hint);
 
   parent.appendChild(wrap);
 

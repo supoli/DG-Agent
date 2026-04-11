@@ -39,16 +39,16 @@ export function resolveProviderConfig(): TransportConfig {
   if (providerId === 'free') {
     baseUrl = FREE_PROXY_URL;
     apiKey = 'free';
-    model = 'qwen3.5-flash';
+    model = 'qwen3.5-plus';
   } else if (providerId === 'qwen') {
     baseUrl = baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
-    model = model || 'qwen3.5-flash';
+    model = model || 'qwen3.5-plus';
   } else if (providerId === 'openai') {
     baseUrl = baseUrl || 'https://api.openai.com/v1';
     model = model || 'gpt-5.3';
   } else if (providerId === 'doubao') {
     baseUrl = 'https://ark.cn-beijing.volces.com/api/v3';
-    model = model || 'doubao-seed-2.0-mini';
+    model = model || 'doubao-seed-2-0-mini-260215';
   }
 
   // Strict mode is on by default everywhere. Only the custom provider lets
@@ -199,7 +199,7 @@ export async function callResponses(
     model: config.model,
     input,
     store: false,
-    temperature: 0.7,
+    temperature: 0.3,
     instructions,
   };
   const rTools = toResponsesTools(tools, config.useStrict);
@@ -212,6 +212,8 @@ export async function callResponses(
     body.parallel_tool_calls = true;
   }
   if (onTextDelta) body.stream = true;
+
+  console.log('[LLM →]', structuredClone(body));
 
   const res = await fetch(`${config.baseUrl}/responses`, {
     method: 'POST',
@@ -230,13 +232,16 @@ export async function callResponses(
 
   if (!onTextDelta) {
     const data = await res.json();
+    console.log('[LLM ←]', structuredClone(data));
     return {
       outputItems: data.output || [],
       streamedText: data.output_text || '',
     };
   }
 
-  return parseSSEStream(res, onTextDelta);
+  const result = await parseSSEStream(res, onTextDelta);
+  console.log('[LLM ←]', structuredClone(result));
+  return result;
 }
 
 // ---------------------------------------------------------------------------

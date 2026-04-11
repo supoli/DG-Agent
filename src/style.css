@@ -47,16 +47,16 @@
   /* Dark — 黑黄 */
   --bg:          #080808;
   --bg-elevated: #141414;
-  --accent:      #ffd700;
-  --accent-soft: rgba(255,215,0,0.10);
-  --accent-hover:rgba(255,215,0,0.18);
+  --accent:      #ffe99d;
+  --accent-soft: rgba(255,233,157,0.10);
+  --accent-hover:rgba(255,233,157,0.18);
   --highlight:   #ffb800;
   --text:        #ececec;
   --text-2:      #999999;
   --text-3:      #666666;
   --border:      #222222;
   --border-strong:#333333;
-  --user-bubble: #ffd700;
+  --user-bubble: #ffe99d;
   --user-text:   #080808;
   --ai-bubble:   #141414;
   --input-bg:    #141414;
@@ -70,7 +70,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg:#080808;--bg-elevated:#141414;--accent:#ffd700;--accent-soft:rgba(255,215,0,0.10);--accent-hover:rgba(255,215,0,0.18);--highlight:#ffb800;--text:#ececec;--text-2:#999999;--text-3:#666666;--border:#222222;--border-strong:#333333;--user-bubble:#ffd700;--user-text:#080808;--ai-bubble:#141414;--input-bg:#141414;--surface:#141414;--shadow-sm:0 1px 2px rgba(0,0,0,0.3);--shadow:0 2px 8px rgba(0,0,0,0.4);--shadow-lg:0 8px 32px rgba(0,0,0,0.6);--glass:rgba(14,14,14,0.85);--glass-border:rgba(34,34,34,0.60);
+    --bg:#080808;--bg-elevated:#141414;--accent:#ffe99d;--accent-soft:rgba(255,233,157,0.10);--accent-hover:rgba(255,233,157,0.18);--highlight:#ffb800;--text:#ececec;--text-2:#999999;--text-3:#666666;--border:#222222;--border-strong:#333333;--user-bubble:#ffe99d;--user-text:#080808;--ai-bubble:#141414;--input-bg:#141414;--surface:#141414;--shadow-sm:0 1px 2px rgba(0,0,0,0.3);--shadow:0 2px 8px rgba(0,0,0,0.4);--shadow-lg:0 8px 32px rgba(0,0,0,0.6);--glass:rgba(14,14,14,0.85);--glass-border:rgba(34,34,34,0.60);
   }
 }
 
@@ -921,6 +921,14 @@ html, body {
   color: var(--accent);
 }
 
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-top-tabs { margin-bottom: 4px; }
+
 /* Provider tabs in settings */
 .provider-tabs {
   display: flex;
@@ -997,19 +1005,6 @@ html, body {
 }
 
 /* ---------- Behavior settings ---------- */
-.behavior-settings {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-
-.behavior-settings-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 12px;
-}
-
 .setting-group-inline {
   flex-direction: row !important;
   align-items: center;
@@ -1127,6 +1122,10 @@ html, body {
 .perm-mode-wrap {
   margin-top: 18px;
   margin-bottom: 4px;
+}
+
+.bg-behavior-wrap {
+  margin-top: 18px;
 }
 
 .perm-mode-header {
@@ -1356,6 +1355,12 @@ html, body {
      into a 2×2 grid underneath. */
   .provider-tab:first-child {
     flex: 0 0 100%;
+  }
+  /* Top-level settings tabs (安全 / API) should stay side-by-side. */
+  .settings-top-tabs { flex-wrap: nowrap; }
+  .settings-top-tabs .provider-tab,
+  .settings-top-tabs .provider-tab:first-child {
+    flex: 1 1 0;
   }
 
   .icon-btn { width: 34px; height: 34px; }

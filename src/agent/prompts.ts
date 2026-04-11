@@ -15,7 +15,6 @@
  */
 
 import type { DeviceState, PromptPreset } from '../types';
-import { tools } from './tools';
 import { MAX_ADJUST_STRENGTH_PER_TURN } from './policies';
 import { getMaxStrength } from './providers';
 
@@ -118,50 +117,21 @@ export const PROMPT_PRESETS: PromptPreset[] = [
 export const DEFAULT_PRESET_ID = 'gentle';
 
 // ---------------------------------------------------------------------------
-// Static reference block (built once at module load)
+// Static blocks (built once at module load)
 // ---------------------------------------------------------------------------
 
-/**
- * Build a concise one-line summary from each tool's description for the
- * human-readable catalog block. Strip the leading 【tag】 and keep only the
- * first sentence so the system prompt stays compact — the model still sees
- * the full description via the function schema.
- */
-const TOOL_CATALOG = tools.map((t) => {
-  const firstLine = t.description.split('\n')[0].replace(/^【[^】]*】/, '');
-  const firstSentence = firstLine.split(/[。\n]/)[0] + '。';
-  return `  - ${t.name.padEnd(20)} ${firstSentence}`;
-}).join('\n');
+const DEVICE_BLOCK = `[设备]
+你控制一台已通过蓝牙连接的 DG-Lab 郊狼 (Coyote 3.0) 电脉冲设备，双通道 A / B 独立控制。设备操作必须通过工具完成——在文字里描述操作不会真的影响设备。`;
 
-const DEVICE_REFERENCE_BLOCK = `[设备能力 — 静态参考，对用户不可见]
-你拥有一台已通过蓝牙连接的 DG-Lab 郊狼 (Coyote 3.0) 电脉冲设备。
-设备控制只能通过下面的工具完成；在文字里描述操作（例如"我把强度调到 20"）不会真的影响设备。
-
-可用工具（详细参数见各工具自己的 description）：
-${TOOL_CATALOG}
-
-设备参数：
-  • A / B 双通道独立控制
-  • 协议层强度范围 0–200，新手从 5–15 起步，按反馈逐步增加
-  • 真实可请求范围由用户在 App 内设置的安全上限决定，**永远以下面"系统观察"块里"最高可请求"显示的值为准**——超过那个数会被自动夹紧到那个数，并在工具回执的 limited:true 字段告知你
-  • 你没有任何工具可以修改这个上限，它只能由用户在 App 内调整
-  • 波形预设：breath（呼吸/最柔）、tide（潮汐）、pulse_low/mid/high（低/中/高脉冲）、tap（轻拍）
-  • 关闭设备只能用 stop；不要用 start(strength=0) 变通
-  • 状态机心智：通道在「停止」状态时用 start 启动；通道在「运行」状态时，调强度用 adjust_strength、换波形用 change_wave，不要重复调 start
-
-调用纪律：
-  1. 要做就先调工具再说话。不要在文字里写"已经/帮你/为你..."却没真的调用工具——说了不等于做了
-  2. 当前设备状态已在下方"系统观察"块里提供（每次响应前由系统刷新），直接读取即可，不存在"过期"的可能；你没有任何"查询状态"的工具，也不需要——只管用就是
-  3. 拿到工具结果后，请根据返回的 deviceState 回复用户，不要编造或想象设备状态
-  4. 工具返回错误时如实告诉用户，不要假装成功
-  5. 同一回合内 adjust_strength 最多调用 ${MAX_ADJUST_STRENGTH_PER_TURN} 次；达到上限后本回合不要再继续爬升强度，直接回复用户即可
-  6. 拿到工具结果后请直接给出最终回复，不要为了"再确认一下"反复调用同一个工具
-  7. 如果工具返回 "用户拒绝了本次工具调用"，说明用户在弹窗里点了拒绝：不要立即用相同参数重试，也不要在回复里假装已经执行；改为询问用户意愿或给出文字建议`;
+const BEHAVIOR_RULES = `[行为规则]
+  1. 需要操作设备时，先调用对应工具，再生成文字回复
+  2. 回复设备状态时，只引用 [当前设备状态] 和工具返回值中的数字
+  3. adjust_strength 本回合最多调用 ${MAX_ADJUST_STRENGTH_PER_TURN} 次
+  4. 工具返回错误或被用户拒绝时，如实告知用户，不要假装成功或立即重试`;
 
 const FIRST_ITERATION_STRATEGY = `[本回合策略 — 仅本回合首次响应生效]
-  - 涉及设备操作（开始、调整、停止刺激等）时，必须先调用对应工具再生成文字回复——"说了不等于做了"
-  - 只是闲聊、问答或给建议时，直接生成文字回复即可：当前设备状态已经在上方"系统观察"块里提供，不需要任何工具去"查一下"
-  - 任何工具调用结束后请立即给出最终回复，不要反复调用同一个工具来"再确认一下"`;
+  - 涉及设备操作（开始、调整、停止刺激等）时，先调用对应工具再生成文字回复
+  - 只是闲聊、问答或给建议时，直接生成文字回复即可——当前设备状态已在上方 [当前设备状态] 块里提供，不需要调用工具去"查一下"`;
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -193,9 +163,10 @@ export function buildInstructions(opts: BuildInstructionsOptions): string {
   const turnUsageBlock = buildTurnToolUsageBlock(opts.turnToolCalls);
   const blocks = [
     persona,
-    DEVICE_REFERENCE_BLOCK,
+    DEVICE_BLOCK,
     statusBlock,
     turnUsageBlock,
+    BEHAVIOR_RULES,
   ];
   if (opts.isFirstIteration) {
     blocks.push(FIRST_ITERATION_STRATEGY);
@@ -223,18 +194,13 @@ function resolvePersona(presetId: string, customPrompt?: string): string {
  */
 function buildTurnToolUsageBlock(calls: readonly TurnToolCall[]): string {
   if (calls.length === 0) {
-    return (
-      `[本回合工具调用记录 — 系统观察，每次响应前由系统注入]\n` +
-      `本回合你尚未调用任何工具。\n` +
-      `这意味着设备从你接到本轮用户消息开始就没有被你动过。如果你打算在回复里写"已经/帮你/我把...增加/调到/换成..."等表示设备操作已完成的措辞，请先调用对应工具——否则那就是在对用户撒谎。如果只是想表达建议，请改用未完成态："我可以...","要不要..."。`
-    );
+    return `[本回合已调用工具]\n  (无)`;
   }
   const lines = calls.map((c, i) => `  ${i + 1}. ${c.name}(${c.argsJson})`).join('\n');
   return (
-    `[本回合工具调用记录 — 系统观察，每次响应前由系统注入]\n` +
-    `本回合你已经调用过以下工具（共 ${calls.length} 次，按调用顺序）：\n` +
+    `[本回合已调用工具]\n` +
     `${lines}\n` +
-    `除上述之外你没有动过设备。生成回复前请对照此清单：你打算告诉用户的"已完成"动作必须能在上面找到对应的工具调用，否则就是幻觉。`
+    `生成回复前请对照此清单：你声称已完成的动作必须能在上面找到对应的调用。`
   );
 }
 
@@ -251,11 +217,10 @@ function buildDeviceStatusBlock(s: DeviceState): string {
   const capA = Math.min(s.limitA, getMaxStrength('A'));
   const capB = Math.min(s.limitB, getMaxStrength('B'));
   return (
-    `[当前设备状态 — 系统观察，每次响应前由系统注入]\n` +
+    `[当前设备状态]\n` +
     `  • 连接：${conn}\n` +
     `  • 电量：${battery}\n` +
-    `  • A 通道：强度 ${s.strengthA}（最高可请求 ${capA}），波形${s.waveActiveA ? '活跃' : '停止'}\n` +
-    `  • B 通道：强度 ${s.strengthB}（最高可请求 ${capB}），波形${s.waveActiveB ? '活跃' : '停止'}\n` +
-    `  • 强度上限由用户在 App 内设置，超过会被自动夹紧到上述值，无法绕过`
+    `  • A 通道：强度 ${s.strengthA} / 上限 ${capA}，波形${s.waveActiveA ? '活跃' : '停止'}\n` +
+    `  • B 通道：强度 ${s.strengthB} / 上限 ${capB}，波形${s.waveActiveB ? '活跃' : '停止'}`
   );
 }

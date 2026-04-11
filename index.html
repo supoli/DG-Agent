@@ -125,19 +125,25 @@
     </div>
 
 
-    <!-- ===== Settings modal (API keys only) ===== -->
+    <!-- ===== Settings modal ===== -->
     <div id="settings-modal" class="modal hidden">
       <div class="modal-content">
         <div class="modal-header">
-          <h2>API 设置</h2>
+          <h2>设置</h2>
           <button class="modal-close" id="btn-close-settings" aria-label="关闭">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
         <div class="modal-body">
-          <div id="settings-current-ai" class="settings-current-ai"></div>
-          <div id="settings-provider-tabs" class="provider-tabs"></div>
-          <div id="provider-config"></div>
+          <div id="settings-top-tabs" class="provider-tabs settings-top-tabs"></div>
+          <div id="settings-panel-security" class="settings-panel">
+            <div id="security-config"></div>
+          </div>
+          <div id="settings-panel-api" class="settings-panel hidden">
+            <div id="settings-current-ai" class="settings-current-ai"></div>
+            <div id="settings-provider-tabs" class="provider-tabs"></div>
+            <div id="provider-config"></div>
+          </div>
         </div>
       </div>
     </div>

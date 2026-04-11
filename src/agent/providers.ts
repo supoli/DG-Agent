@@ -22,7 +22,7 @@ export const PROVIDERS: ProviderDef[] = [
     name: '通义千问',
     fields: [
       { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'sk-...' },
-      { key: 'model', label: '模型', type: 'text', placeholder: 'qwen3.5-flash' },
+      { key: 'model', label: '模型', type: 'text', placeholder: 'qwen3.5-plus' },
     ],
   },
   {
@@ -37,10 +37,10 @@ export const PROVIDERS: ProviderDef[] = [
   {
     id: 'doubao',
     name: '豆包',
-    hint: '火山方舟 Responses API。model 填 Endpoint ID（如 ep-xxx）或模型 ID（如 doubao-seed-2.0-mini）。',
+    hint: '火山方舟 Responses API。model 填 Endpoint ID（如 ep-xxx）或模型 ID（如 doubao-seed-2-0-mini-260215）。',
     fields: [
       { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'ARK API Key' },
-      { key: 'model', label: '模型 / Endpoint ID', type: 'text', placeholder: 'doubao-seed-2.0-mini' },
+      { key: 'model', label: '模型 / Endpoint ID', type: 'text', placeholder: 'doubao-seed-2-0-mini-260215' },
     ],
   },
   {
